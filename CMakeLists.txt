@@ -29,11 +29,7 @@ FetchContent_MakeAvailable(tsl)
 # main target
 add_library(FORM
 	form/form.cpp
-	form/planar/factor.cpp
-	form/point/factor.cpp
-	form/mixed/factor.cpp
 	form/separate/factor.cpp
-	form/classic/factor.cpp
 	form/constraints.cpp
 	form/map.cpp
 )
@@ -49,26 +45,10 @@ target_sources(FORM
 		form/form.hpp
 		form/timing.hpp
 		form/point_types.hpp
-		# planar headers
-		form/planar/factor.hpp
-		form/planar/feature.hpp
-		form/planar/extraction.hpp
-		# point headers
-		form/point/factor.hpp
-		form/point/feature.hpp
-		form/point/extraction.hpp
-		# mixed headers
-		form/mixed/factor.hpp
-		form/mixed/feature.hpp
-		form/mixed/extraction.hpp
 		# separate headers
 		form/separate/factor.hpp
 		form/separate/feature.hpp
 		form/separate/extraction.hpp
-		# classic headers
-		form/classic/factor.hpp
-		form/classic/feature.hpp
-		form/classic/extraction.hpp
 )
 target_link_libraries(FORM
 	PUBLIC

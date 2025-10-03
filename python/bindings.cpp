@@ -1,7 +1,6 @@
 #include "evalio/pipeline.h"
 #include "evalio/types.h"
 
-#include "form/classic/extraction.hpp"
 #include "form/form.hpp"
 #include "form/map.hpp"
 #include "form/point_types.hpp"
@@ -283,8 +282,7 @@ NB_MODULE(_core, m) {
       .def_static("default_params", &Tclio::default_params);
 
   // Expose extraction methods too
-  nb::class_<form::separate::KeypointExtractionParams>(
-      m, "KeypointExtractionParams_separate")
+  nb::class_<form::separate::KeypointExtractionParams>(m, "KeypointExtractionParams")
       .def(nb::init<>())
       .def_rw("neighbor_points",
               &form::separate::KeypointExtractionParams::neighbor_points)
@@ -304,7 +302,7 @@ NB_MODULE(_core, m) {
       .def_rw("max_norm_squared",
               &form::separate::KeypointExtractionParams::max_norm_squared);
 
-  m.def("extract_keypoints_separate",
+  m.def("extract_keypoints",
         [](const std::vector<Eigen::Vector3d> &points,
            const form::separate::KeypointExtractionParams &params,
            evalio::LidarParams &lidar_params) {
@@ -345,78 +343,5 @@ NB_MODULE(_core, m) {
             }
           }
           return std::make_tuple(planar_points, normals, point_points);
-        });
-
-  // Expose extraction methods too
-  nb::class_<form::classic::KeypointExtractionParams>(
-      m, "KeypointExtractionParams_classic")
-      .def(nb::init<>())
-      .def_rw("neighbor_points",
-              &form::classic::KeypointExtractionParams::neighbor_points)
-      .def_rw("num_sectors", &form::classic::KeypointExtractionParams::num_sectors)
-      .def_rw("planar_feats_per_sector",
-              &form::classic::KeypointExtractionParams::planar_feats_per_sector)
-      .def_rw("planar_threshold",
-              &form::classic::KeypointExtractionParams::planar_threshold)
-      .def_rw("occlusion_thresh",
-              &form::classic::KeypointExtractionParams::occlusion_thresh)
-      .def_rw("edge_feat_threshold",
-              &form::classic::KeypointExtractionParams::edge_feat_threshold)
-      .def_rw("edge_feats_per_sector",
-              &form::classic::KeypointExtractionParams::edge_feats_per_sector)
-      // Parameters for normal estimation
-      .def_rw("radius", &form::classic::KeypointExtractionParams::radius)
-      .def_rw("min_points", &form::classic::KeypointExtractionParams::min_points)
-      // Based on LiDAR info
-      .def_rw("min_norm_squared",
-              &form::classic::KeypointExtractionParams::min_norm_squared)
-      .def_rw("max_norm_squared",
-              &form::classic::KeypointExtractionParams::max_norm_squared);
-
-  m.def("extract_keypoints_classic",
-        [](const std::vector<Eigen::Vector3d> &points,
-           const form::classic::KeypointExtractionParams &params,
-           evalio::LidarParams &lidar_params) {
-          // Convert the input points to form::PointXYZICD<float>
-          form::PointCloud<form::PointXYZICD<float>> scan;
-          scan.num_columns = lidar_params.num_columns;
-          scan.num_rows = lidar_params.num_rows;
-          scan.stamp.setFromNanoseconds(0);      // Set a dummy timestamp
-          scan.firstStamp.setFromNanoseconds(0); // Set a dummy first timestamp
-          scan.lastStamp.setFromNanoseconds(0);  // Set a dummy last timestamp
-
-          for (const auto &point : points) {
-            scan.points.emplace_back(form::PointXYZICD<float>{
-                .x = static_cast<float>(point.x()),
-                .y = static_cast<float>(point.y()),
-                .z = static_cast<float>(point.z()),
-                ._ = 0.0f,                     // Placeholder for unused field
-                .intensity = 0,                // Placeholder for intensity
-                .channel = 0,                  // Placeholder for channel
-                .timeOffset = form::Duration() // Placeholder for time offset
-            });
-          }
-
-          // Call the keypoint extraction function from the Tclio class
-          tbb::concurrent_vector<form::classic::PointXYZNTS<double>> keypoints =
-              form::classic::extract_keypoints(scan, params, 0);
-
-          // return a tuple of (planar_points, normals, point_points)
-          std::vector<Eigen::Vector3d> planar_points;
-          std::vector<Eigen::Vector3d> planar_normals;
-          std::vector<Eigen::Vector3d> edge_points;
-          std::vector<Eigen::Vector3d> edge_directions;
-
-          for (const auto &keypoint : keypoints) {
-            if (keypoint.kind == form::classic::FeatureType::Planar) {
-              planar_points.emplace_back(keypoint.x, keypoint.y, keypoint.z);
-              planar_normals.emplace_back(keypoint.nx, keypoint.ny, keypoint.nz);
-            } else if (keypoint.kind == form::classic::FeatureType::Edge) {
-              edge_points.emplace_back(keypoint.x, keypoint.y, keypoint.z);
-              edge_directions.emplace_back(keypoint.nx, keypoint.ny, keypoint.nz);
-            }
-          }
-          return std::make_tuple(planar_points, planar_normals, edge_points,
-                                 edge_directions);
         });
 }

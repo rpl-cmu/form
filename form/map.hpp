@@ -8,10 +8,6 @@
 
 #include <tsl/robin_map.h>
 
-#include "form/classic/feature.hpp"
-#include "form/mixed/feature.hpp"
-#include "form/planar/feature.hpp"
-#include "form/point/feature.hpp"
 #include "form/separate/feature.hpp"
 
 using gtsam::symbol_shorthand::X;
@@ -38,12 +34,7 @@ template <typename Point> struct SearchResult {
 };
 
 // XYZ - Scan idx - Line idx
-// TODO: Move this into a types file
-// using Keypoint_t = point::PointXYZS<double>;
-// using Keypoint_t = mixed::PointXYZNTS<double>;
-// using Keypoint_t = planar::PointXYZNS<double>;
 using Keypoint_t = separate::PointXYZNTS<double>;
-// using Keypoint_t = classic::PointXYZNTS<double>;
 
 // forward declaration
 class KeypointMap;

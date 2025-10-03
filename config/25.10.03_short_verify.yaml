@@ -1,14 +1,14 @@
 pipelines:
   - pipeline: form
-    name: post_rename3
+    name: post_remove_old_features
 
 datasets:
-    # ncd20
-  # - name: newer_college_2020/short_experiment
-  #   length: 1000
+  # ncd20
+  - name: newer_college_2020/short_experiment
+    length: 1000
   # ncd21
   - name: newer_college_2021/stairs
     length: 1000
   # mcd
-  # - name: multi_campus/kth_day_06
-  #   length: 1000
+  - name: multi_campus/kth_day_06
+    length: 1000

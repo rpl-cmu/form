@@ -1,5 +1,3 @@
-#include "form/planar/factor.hpp"
-#include "form/point/factor.hpp"
 #include "form/separate/factor.hpp"
 
 #include "gtsam/geometry/Pose3.h"
@@ -22,8 +20,6 @@ using gtsam::symbol_shorthand::X;
 
 #define EXPECT_ZERO(v) EXPECT_TRUE(v.isZero(1e-4)) << " Actual is not zero:\n" << v
 
-using namespace form::point;
-using namespace form::planar;
 using namespace form::separate;
 
 TEST(Separate, PointPoint) {

@@ -1,11 +1,7 @@
 #pragma once
 
-#include "form/classic/extraction.hpp"
 #include "form/constraints.hpp"
 #include "form/map.hpp"
-#include "form/mixed/extraction.hpp"
-#include "form/planar/extraction.hpp"
-#include "form/point/extraction.hpp"
 #include "form/point_types.hpp"
 #include "form/separate/extraction.hpp"
 
