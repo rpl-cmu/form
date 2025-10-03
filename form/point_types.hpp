@@ -1,7 +1,5 @@
 #pragma once
 
-#include "form/timing.hpp"
-
 #include <Eigen/Core>
 #include <gtsam/geometry/Pose3.h>
 
@@ -16,7 +14,6 @@ template <typename T> struct PointXYZICD {
   T _ = static_cast<T>(0);
   short unsigned int intensity;
   short unsigned int channel;
-  Duration timeOffset;
 
   // ------------------------- Getters ------------------------- //
   [[nodiscard]] inline Eigen::Map<Eigen::Matrix<T, 3, 1>> vec3() noexcept {
@@ -62,8 +59,7 @@ template <typename T> struct PointXYZICD {
 
   [[nodiscard]] constexpr bool operator==(const PointXYZICD &other) const noexcept {
     return x == other.x && y == other.y && z == other.z &&
-           intensity == other.intensity && channel == other.channel &&
-           timeOffset == other.timeOffset;
+           intensity == other.intensity && channel == other.channel;
   }
 
   template <typename S>
@@ -73,15 +69,11 @@ template <typename T> struct PointXYZICD {
             .z = static_cast<S>(z),
             ._ = 0,
             .intensity = intensity,
-            .channel = channel,
-            .timeOffset = timeOffset};
+            .channel = channel};
   }
 };
 
 template <typename T> struct PointCloud {
-  Time stamp;
-  Time firstStamp;
-  Time lastStamp;
   std::vector<T> points;
   size_t num_columns = 0;
   short unsigned int num_rows = 0;

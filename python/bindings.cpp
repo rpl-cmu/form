@@ -5,7 +5,6 @@
 #include "form/form.hpp"
 #include "form/map.hpp"
 #include "form/point_types.hpp"
-#include "form/timing.hpp"
 
 #include <cstdio>
 #include <gtsam/geometry/Pose3.h>
@@ -45,8 +44,6 @@ template <typename Point> evalio::Point point_to_evalio(const Point &point) {
 }
 
 form::PointXYZICD<float> point_to_form(const evalio::Point &point) {
-  form::Duration t;
-  t.setFromNanoseconds(point.t.to_nsec());
   return {
       .x = static_cast<float>(point.x),
       .y = static_cast<float>(point.y),
@@ -54,7 +51,6 @@ form::PointXYZICD<float> point_to_form(const evalio::Point &point) {
       ._ = 0.0,
       .intensity = 0, // TODO: Figure out this conversion later
       .channel = point.row,
-      .timeOffset = t,
   };
 }
 
@@ -234,9 +230,6 @@ public:
     auto end = mm.stamp + delta_time_;
 
     // TODO: Use start or end as the stamp?
-    scan.stamp.setFromNanoseconds(start.to_nsec());
-    scan.firstStamp.setFromNanoseconds(start.to_nsec());
-    scan.lastStamp.setFromNanoseconds(end.to_nsec());
     scan.num_columns = num_columns_;
     scan.num_rows = num_rows_;
     for (const auto &point : mm.points) {
@@ -310,19 +303,15 @@ NB_MODULE(_core, m) {
           form::PointCloud<form::PointXYZICD<float>> scan;
           scan.num_columns = lidar_params.num_columns;
           scan.num_rows = lidar_params.num_rows;
-          scan.stamp.setFromNanoseconds(0);      // Set a dummy timestamp
-          scan.firstStamp.setFromNanoseconds(0); // Set a dummy first timestamp
-          scan.lastStamp.setFromNanoseconds(0);  // Set a dummy last timestamp
 
           for (const auto &point : points) {
             scan.points.emplace_back(form::PointXYZICD<float>{
                 .x = static_cast<float>(point.x()),
                 .y = static_cast<float>(point.y()),
                 .z = static_cast<float>(point.z()),
-                ._ = 0.0f,                     // Placeholder for unused field
-                .intensity = 0,                // Placeholder for intensity
-                .channel = 0,                  // Placeholder for channel
-                .timeOffset = form::Duration() // Placeholder for time offset
+                ._ = 0.0f,      // Placeholder for unused field
+                .intensity = 0, // Placeholder for intensity
+                .channel = 0,   // Placeholder for channel
             });
           }
 

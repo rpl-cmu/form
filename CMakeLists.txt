@@ -43,7 +43,6 @@ target_sources(FORM
 		form/constraints.hpp
 		form/map.hpp
 		form/form.hpp
-		form/timing.hpp
 		form/point_types.hpp
 		# feature headers
 		form/feature/factor.hpp
