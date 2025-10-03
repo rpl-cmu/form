@@ -29,7 +29,7 @@ FetchContent_MakeAvailable(tsl)
 # main target
 add_library(FORM
 	form/form.cpp
-	form/separate/factor.cpp
+	form/feature/factor.cpp
 	form/constraints.cpp
 	form/map.cpp
 )
@@ -45,10 +45,10 @@ target_sources(FORM
 		form/form.hpp
 		form/timing.hpp
 		form/point_types.hpp
-		# separate headers
-		form/separate/factor.hpp
-		form/separate/feature.hpp
-		form/separate/extraction.hpp
+		# feature headers
+		form/feature/factor.hpp
+		form/feature/type.hpp
+		form/feature/extraction.hpp
 )
 target_link_libraries(FORM
 	PUBLIC

@@ -5,11 +5,11 @@
 #include <gtsam/nonlinear/NonlinearFactor.h>
 #include <vector>
 
+#include "form/feature/type.hpp"
 #include "form/gtsam.h"
 #include "form/map.hpp"
-#include "form/separate/feature.hpp"
 
-namespace form::separate {
+namespace form::feature {
 
 static void check(const gtsam::SharedNoiseModel &noiseModel, size_t m) {
   if (noiseModel && m != noiseModel->dim())
@@ -75,15 +75,15 @@ struct PointPoint {
                 OptionalJacobian residual_D_Tj = boost::none) const noexcept;
 };
 
-class SeparateFactor : public DenseFactor {
+class FeatureFactor : public DenseFactor {
 public:
   PlanePoint::Ptr plane_plane;
   PointPoint::Ptr point_point;
 
 public:
-  SeparateFactor(const gtsam::Key i, const gtsam::Key j,
-                 const std::tuple<PlanePoint::Ptr, PointPoint::Ptr> &constraint,
-                 double sigma) noexcept;
+  FeatureFactor(const gtsam::Key i, const gtsam::Key j,
+                const std::tuple<PlanePoint::Ptr, PointPoint::Ptr> &constraint,
+                double sigma) noexcept;
 
   [[nodiscard]] gtsam::Vector
   evaluateError(const gtsam::Pose3 &Ti, const gtsam::Pose3 &Tj,
@@ -96,4 +96,4 @@ public:
   [[nodiscard]] gtsam::Key getKey_j() const noexcept { return keys_[1]; }
 };
 
-} // namespace form::separate
+} // namespace form::feature

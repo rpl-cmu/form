@@ -13,7 +13,7 @@ using gtsam::symbol_shorthand::V;
 using gtsam::symbol_shorthand::X;
 
 namespace form {
-bool is_empty(const std::tuple<separate::PlanePoint::Ptr, separate::PointPoint::Ptr>
+bool is_empty(const std::tuple<feature::PlanePoint::Ptr, feature::PointPoint::Ptr>
                   &constraints) {
   return std::get<0>(constraints)->num_constraints() == 0 &&
          std::get<1>(constraints)->num_constraints() == 0;
@@ -39,7 +39,7 @@ void ConstraintManager::initialize(const Pose3 &initial_pose,
 }
 
 tsl::robin_map<FrameIndex,
-               std::tuple<separate::PlanePoint::Ptr, separate::PointPoint::Ptr>> &
+               std::tuple<feature::PlanePoint::Ptr, feature::PointPoint::Ptr>> &
 ConstraintManager::get_constraints(const FrameIndex &frame_j) noexcept {
   // Check if it already exists
   auto search = m_constraints.find(frame_j);
@@ -49,18 +49,18 @@ ConstraintManager::get_constraints(const FrameIndex &frame_j) noexcept {
   // If not, make it and return it
   else {
     tsl::robin_map<FrameIndex,
-                   std::tuple<separate::PlanePoint::Ptr, separate::PointPoint::Ptr>>
+                   std::tuple<feature::PlanePoint::Ptr, feature::PointPoint::Ptr>>
         new_constraints;
     // Add empty vectors for all frames
     for (const auto &frame_i : m_keyframe_indices) {
       new_constraints.insert(std::make_pair(
-          frame_i, std::make_tuple(std::make_shared<separate::PlanePoint>(),
-                                   std::make_shared<separate::PointPoint>())));
+          frame_i, std::make_tuple(std::make_shared<feature::PlanePoint>(),
+                                   std::make_shared<feature::PointPoint>())));
     }
     for (const auto &frame_i : m_recent_frame_indices) {
       new_constraints.insert(std::make_pair(
-          frame_i, std::make_tuple(std::make_shared<separate::PlanePoint>(),
-                                   std::make_shared<separate::PointPoint>())));
+          frame_i, std::make_tuple(std::make_shared<feature::PlanePoint>(),
+                                   std::make_shared<feature::PointPoint>())));
     }
     m_constraints.insert(std::make_pair(frame_j, new_constraints));
     return m_constraints.at(frame_j);

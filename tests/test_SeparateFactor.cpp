@@ -1,4 +1,4 @@
-#include "form/separate/factor.hpp"
+#include "form/feature/factor.hpp"
 
 #include "gtsam/geometry/Pose3.h"
 #include "gtsam/inference/Symbol.h"
@@ -20,7 +20,7 @@ using gtsam::symbol_shorthand::X;
 
 #define EXPECT_ZERO(v) EXPECT_TRUE(v.isZero(1e-4)) << " Actual is not zero:\n" << v
 
-using namespace form::separate;
+using namespace form::feature;
 
 TEST(Separate, PointPoint) {
   gtsam::Pose3 x0 = gtsam::Pose3(gtsam::Rot3::RzRyRx(0.1, 0.2, 0.3), {1, 2, 3});

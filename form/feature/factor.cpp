@@ -1,4 +1,4 @@
-#include "form/separate/factor.hpp"
+#include "form/feature/factor.hpp"
 #include "form/gtsam.h"
 #include <Eigen/src/Core/Matrix.h>
 #include <Eigen/src/Core/util/Constants.h>
@@ -8,7 +8,7 @@
 #include <gtsam/linear/JacobianFactor.h>
 #include <gtsam/linear/NoiseModel.h>
 
-namespace form::separate {
+namespace form::feature {
 // ------------------------- Separate Computation ------------------------- //
 [[nodiscard]] gtsam::Vector
 PlanePoint::evaluateError(const gtsam::Pose3 &Ti, const gtsam::Pose3 &Tj,
@@ -111,7 +111,7 @@ PointPoint::evaluateError(const gtsam::Pose3 &Ti, const gtsam::Pose3 &Tj,
 }
 
 // ------------------------- Separate Combined Factor ------------------------- //
-SeparateFactor::SeparateFactor(
+FeatureFactor::FeatureFactor(
     const gtsam::Key i, const gtsam::Key j,
     const std::tuple<PlanePoint::Ptr, PointPoint::Ptr> &constraints,
     double sigma) noexcept
@@ -123,9 +123,9 @@ SeparateFactor::SeparateFactor(
       plane_plane(std::get<0>(constraints)), point_point(std::get<1>(constraints)) {}
 
 [[nodiscard]] gtsam::Vector
-SeparateFactor::evaluateError(const gtsam::Pose3 &Ti, const gtsam::Pose3 &Tj,
-                              boost::optional<gtsam::Matrix &> H1,
-                              boost::optional<gtsam::Matrix &> H2) const noexcept {
+FeatureFactor::evaluateError(const gtsam::Pose3 &Ti, const gtsam::Pose3 &Tj,
+                             boost::optional<gtsam::Matrix &> H1,
+                             boost::optional<gtsam::Matrix &> H2) const noexcept {
 
   size_t size = plane_plane->num_residuals() + point_point->num_residuals();
   gtsam::Vector residual(size);
@@ -169,4 +169,4 @@ SeparateFactor::evaluateError(const gtsam::Pose3 &Ti, const gtsam::Pose3 &Tj,
   return residual;
 }
 
-} // namespace form::separate
+} // namespace form::feature

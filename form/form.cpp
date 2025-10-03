@@ -1,4 +1,5 @@
 #include "form/form.hpp"
+#include "form/feature/extraction.hpp"
 #include "form/map.hpp"
 
 namespace form {
@@ -27,7 +28,7 @@ void Estimator::reset(const Estimator::Params &params) noexcept {
       KeypointMap(KeypointMap::Params{.voxelWidth = m_params.max_dist_max});
 
   m_constraints = ConstraintManager(params.constraints);
-  m_extractor = Keypoint_t::Extractor(params.keypointExtraction);
+  m_extractor = feature::FeatureExtractor(params.keypointExtraction);
 
   m_frame = 0;
 }

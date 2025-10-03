@@ -51,7 +51,6 @@ PIPES = [
 def pretty_pipe_names(name, in_latex: bool = True) -> str:
     return {
         "form": r"\acs{ours}" if in_latex else "FORM",
-        "form_separate": r"\acs{ours}" if in_latex else "FORM",
         "kiss": "KISS",
         "genz": "GenZ",
         "mad_slow": "MAD",
@@ -99,7 +98,6 @@ def setup_plot() -> dict[str, tuple[float, float, float]]:
 
     return {
         "form": c[0],
-        "form_separate": c[0],
         "kiss": c[1],
         "genz": c[2],
         "mad_slow": c[3],

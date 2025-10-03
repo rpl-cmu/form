@@ -1,10 +1,10 @@
 #include "evalio/pipeline.h"
 #include "evalio/types.h"
 
+#include "form/feature/extraction.hpp"
 #include "form/form.hpp"
 #include "form/map.hpp"
 #include "form/point_types.hpp"
-#include "form/separate/extraction.hpp"
 #include "form/timing.hpp"
 
 #include <cstdio>
@@ -282,29 +282,29 @@ NB_MODULE(_core, m) {
       .def_static("default_params", &Tclio::default_params);
 
   // Expose extraction methods too
-  nb::class_<form::separate::KeypointExtractionParams>(m, "KeypointExtractionParams")
+  nb::class_<form::feature::KeypointExtractionParams>(m, "KeypointExtractionParams")
       .def(nb::init<>())
       .def_rw("neighbor_points",
-              &form::separate::KeypointExtractionParams::neighbor_points)
-      .def_rw("num_sectors", &form::separate::KeypointExtractionParams::num_sectors)
+              &form::feature::KeypointExtractionParams::neighbor_points)
+      .def_rw("num_sectors", &form::feature::KeypointExtractionParams::num_sectors)
       .def_rw("planar_feats_per_sector",
-              &form::separate::KeypointExtractionParams::planar_feats_per_sector)
+              &form::feature::KeypointExtractionParams::planar_feats_per_sector)
       .def_rw("planar_threshold",
-              &form::separate::KeypointExtractionParams::planar_threshold)
+              &form::feature::KeypointExtractionParams::planar_threshold)
       .def_rw("point_feats_per_sector",
-              &form::separate::KeypointExtractionParams::point_feats_per_sector)
+              &form::feature::KeypointExtractionParams::point_feats_per_sector)
       // Parameters for normal estimation
-      .def_rw("radius", &form::separate::KeypointExtractionParams::radius)
-      .def_rw("min_points", &form::separate::KeypointExtractionParams::min_points)
+      .def_rw("radius", &form::feature::KeypointExtractionParams::radius)
+      .def_rw("min_points", &form::feature::KeypointExtractionParams::min_points)
       // Based on LiDAR info
       .def_rw("min_norm_squared",
-              &form::separate::KeypointExtractionParams::min_norm_squared)
+              &form::feature::KeypointExtractionParams::min_norm_squared)
       .def_rw("max_norm_squared",
-              &form::separate::KeypointExtractionParams::max_norm_squared);
+              &form::feature::KeypointExtractionParams::max_norm_squared);
 
   m.def("extract_keypoints",
         [](const std::vector<Eigen::Vector3d> &points,
-           const form::separate::KeypointExtractionParams &params,
+           const form::feature::KeypointExtractionParams &params,
            evalio::LidarParams &lidar_params) {
           // Convert the input points to form::PointXYZICD<float>
           form::PointCloud<form::PointXYZICD<float>> scan;
@@ -327,18 +327,18 @@ NB_MODULE(_core, m) {
           }
 
           // Call the keypoint extraction function from the Tclio class
-          tbb::concurrent_vector<form::separate::PointXYZNTS<double>> keypoints =
-              form::separate::extract_keypoints(scan, params, 0);
+          tbb::concurrent_vector<form::feature::PointXYZNTS<double>> keypoints =
+              form::feature::extract_keypoints(scan, params, 0);
 
           // return a tuple of (planar_points, normals, point_points)
           std::vector<Eigen::Vector3d> planar_points;
           std::vector<Eigen::Vector3d> normals;
           std::vector<Eigen::Vector3d> point_points;
           for (const auto &keypoint : keypoints) {
-            if (keypoint.kind == form::separate::FeatureType::Planar) {
+            if (keypoint.kind == form::feature::FeatureType::Planar) {
               planar_points.emplace_back(keypoint.x, keypoint.y, keypoint.z);
               normals.emplace_back(keypoint.nx, keypoint.ny, keypoint.nz);
-            } else if (keypoint.kind == form::separate::FeatureType::Point) {
+            } else if (keypoint.kind == form::feature::FeatureType::Point) {
               point_points.emplace_back(keypoint.x, keypoint.y, keypoint.z);
             }
           }

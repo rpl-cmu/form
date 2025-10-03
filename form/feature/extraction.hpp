@@ -1,7 +1,7 @@
 #pragma once
 
+#include "form/feature/type.hpp"
 #include "form/point_types.hpp"
-#include "form/separate/feature.hpp"
 #include <Eigen/Dense>
 
 #include <tbb/blocked_range.h>
@@ -14,7 +14,7 @@
 #include <limits>
 #include <optional>
 
-namespace form::separate {
+namespace form::feature {
 
 struct KeypointExtractionParams {
   // Parameters for keypoint extraction
@@ -448,11 +448,11 @@ extract_keypoints(const PointCloud<Point> &scan,
   return result;
 }
 
-struct ExtractSeparate {
+struct FeatureExtractor {
   using Params = KeypointExtractionParams;
   Params params;
 
-  ExtractSeparate(const Params &params) : params(params) {}
+  FeatureExtractor(const Params &params) : params(params) {}
 
   template <typename Point>
   std::vector<PointXYZNTS<double>> operator()(const PointCloud<Point> &scan,
@@ -463,4 +463,4 @@ struct ExtractSeparate {
   }
 };
 
-} // namespace form::separate
+} // namespace form::feature

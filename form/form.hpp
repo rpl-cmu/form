@@ -1,9 +1,9 @@
 #pragma once
 
 #include "form/constraints.hpp"
+#include "form/feature/extraction.hpp"
 #include "form/map.hpp"
 #include "form/point_types.hpp"
-#include "form/separate/extraction.hpp"
 
 #include <gtsam/geometry/Pose3.h>
 #include <gtsam/inference/Symbol.h>
@@ -35,7 +35,7 @@ public:
     ConstraintManager::Params constraints;
 
     // kp extraction params
-    Keypoint_t::Extractor::Params keypointExtraction;
+    feature::FeatureExtractor::Params keypointExtraction;
 
     // points must be within this percent of range to be matched
     double max_dist_min = 0.1;
@@ -56,7 +56,7 @@ public:
   ConstraintManager m_constraints;
 
   // Extractor
-  Keypoint_t::Extractor m_extractor;
+  feature::FeatureExtractor m_extractor;
 
   // keypoint map
   KeypointMap m_keypoint_map;

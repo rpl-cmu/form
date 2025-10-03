@@ -8,7 +8,7 @@
 
 #include <tsl/robin_map.h>
 
-#include "form/separate/feature.hpp"
+#include "form/feature/type.hpp"
 
 using gtsam::symbol_shorthand::X;
 
@@ -34,7 +34,7 @@ template <typename Point> struct SearchResult {
 };
 
 // XYZ - Scan idx - Line idx
-using Keypoint_t = separate::PointXYZNTS<double>;
+using Keypoint_t = feature::PointXYZNTS<double>;
 
 // forward declaration
 class KeypointMap;

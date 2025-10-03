@@ -1,7 +1,7 @@
 #pragma once
 
+#include "form/feature/factor.hpp"
 #include "form/map.hpp"
-#include "form/separate/factor.hpp"
 
 #include <tsl/robin_map.h>
 
@@ -26,8 +26,7 @@ using FrameIndex = size_t;
 class ConstraintManager {
 
 public:
-  using Constraint = typename Keypoint_t::Constraint;
-  using Factor = typename Keypoint_t::Factor;
+  using Factor = feature::FeatureFactor;
 
   struct Params {
     int64_t max_num_keyframes = 50;
@@ -72,8 +71,8 @@ private:
   // Note that j > i
   // Note that these have to be modified when we rematch.
   using PairwiseConstraintsIndex = tsl::robin_map<
-      FrameIndex, tsl::robin_map<FrameIndex, std::tuple<separate::PlanePoint::Ptr,
-                                                        separate::PointPoint::Ptr>>>;
+      FrameIndex, tsl::robin_map<FrameIndex, std::tuple<feature::PlanePoint::Ptr,
+                                                        feature::PointPoint::Ptr>>>;
   PairwiseConstraintsIndex m_constraints;
 
   // keyframe management
@@ -97,7 +96,7 @@ public:
   // Get all the constraints for a given frame going backward
   // If they don't exist, a new one will be created
   tsl::robin_map<FrameIndex,
-                 std::tuple<separate::PlanePoint::Ptr, separate::PointPoint::Ptr>> &
+                 std::tuple<feature::PlanePoint::Ptr, feature::PointPoint::Ptr>> &
   get_constraints(const FrameIndex &frame_j) noexcept;
 
   // Optimize over the existing constraints, but don't save results

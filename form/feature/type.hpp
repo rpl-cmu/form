@@ -7,12 +7,7 @@ namespace form {
 struct VoxelMapDouble;
 }
 
-namespace form::separate {
-
-// Forward declarations
-struct SeparateFactor;
-struct SeparateConstraint;
-struct ExtractSeparate;
+namespace form::feature {
 
 enum FeatureType {
   Planar = 0, // Planar feature
@@ -24,9 +19,6 @@ template <typename T, typename S = size_t> struct PointXYZNTS {
   using type_t = T;
 
   typedef PointXYZNTS<T, S> Self;
-  typedef SeparateFactor Factor;
-  typedef SeparateConstraint Constraint;
-  typedef ExtractSeparate Extractor;
   typedef VoxelMapDouble Map;
 
   T x;
@@ -120,4 +112,4 @@ template <typename T, typename S = size_t> struct PointXYZNTS {
   }
 };
 
-} // namespace form::separate
+} // namespace form::feature
