@@ -1,7 +1,7 @@
 #pragma once
 
 #include "form/feature/factor.hpp"
-#include "form/map.hpp"
+#include "form/mapping/map.hpp"
 
 #include <tsl/robin_map.h>
 

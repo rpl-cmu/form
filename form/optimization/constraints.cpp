@@ -1,4 +1,4 @@
-#include "form/constraints.hpp"
+#include "form/optimization/constraints.hpp"
 #include <gtsam/linear/GaussianFactorGraph.h>
 #include <gtsam/linear/HessianFactor.h>
 #include <gtsam/nonlinear/NonlinearFactorGraph.h>

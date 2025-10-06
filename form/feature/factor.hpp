@@ -6,8 +6,8 @@
 #include <vector>
 
 #include "form/feature/type.hpp"
-#include "form/gtsam.h"
-#include "form/map.hpp"
+#include "form/mapping/map.hpp"
+#include "form/optimization/gtsam.h"
 
 namespace form::feature {
 

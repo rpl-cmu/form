@@ -30,8 +30,8 @@ FetchContent_MakeAvailable(tsl)
 add_library(FORM
 	form/form.cpp
 	form/feature/factor.cpp
-	form/constraints.cpp
-	form/map.cpp
+	form/optimization/constraints.cpp
+	form/mapping/map.cpp
 )
 target_sources(FORM
 	PUBLIC
@@ -39,15 +39,17 @@ target_sources(FORM
 	TYPE HEADERS
 	BASE_DIRS .
 	FILES 
-		# base headers
-		form/constraints.hpp
-		form/map.hpp
-		form/form.hpp
-		form/point_types.hpp
-		# feature headers
+		# feature
 		form/feature/factor.hpp
 		form/feature/type.hpp
 		form/feature/extraction.hpp
+		# mapping
+		form/mapping/map.hpp
+		# base headers
+		form/optimization/constraints.hpp
+		# core
+		form/form.hpp
+		form/point_types.hpp
 )
 target_link_libraries(FORM
 	PUBLIC

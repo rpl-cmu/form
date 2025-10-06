@@ -1,5 +1,5 @@
 #include "form/feature/factor.hpp"
-#include "form/gtsam.h"
+#include "form/optimization/gtsam.h"
 #include <Eigen/src/Core/Matrix.h>
 #include <Eigen/src/Core/util/Constants.h>
 #include <gtsam/base/Matrix.h>

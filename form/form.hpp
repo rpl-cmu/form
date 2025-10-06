@@ -1,8 +1,8 @@
 #pragma once
 
-#include "form/constraints.hpp"
 #include "form/feature/extraction.hpp"
-#include "form/map.hpp"
+#include "form/mapping/map.hpp"
+#include "form/optimization/constraints.hpp"
 #include "form/point_types.hpp"
 
 #include <gtsam/geometry/Pose3.h>

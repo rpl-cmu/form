@@ -3,7 +3,7 @@
 
 #include "form/feature/extraction.hpp"
 #include "form/form.hpp"
-#include "form/map.hpp"
+#include "form/mapping/map.hpp"
 #include "form/point_types.hpp"
 
 #include <cstdio>
