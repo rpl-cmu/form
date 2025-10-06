@@ -22,6 +22,14 @@ namespace form {
 
 using FrameIndex = size_t;
 
+struct Frame {
+  size_t idx;
+  size_t unused_count = 0;
+  size_t size = 0;
+
+  Frame(size_t idx_, size_t size_ = 0) : idx(idx_), size(size_) {}
+};
+
 class ConstraintManager {
 
 public:
@@ -62,40 +70,38 @@ private:
   Params m_params;
 
   // ------------------------- Data ------------------------- //
-  // graph
+  // Recent frames
+  std::deque<Frame> m_recent_frames;
+
+  // Key frames
+  std::deque<Frame> m_keyframes;
+
+  // Current estimates
   gtsam::Values m_values;
-  // all that factors that aren't planar factors
-  gtsam::NonlinearFactorGraph m_other_factors;
+
+  // Current frame index
   FrameIndex m_frame = 0;
-  std::optional<gtsam::LinearContainerFactor> m_fast_linear = std::nullopt;
+
+  // all that factors that aren't planar factors & empty slots in that graph
+  gtsam::NonlinearFactorGraph m_other_factors;
   std::vector<size_t> m_empty_slots;
+
+  // Linearization of previous matches & m_other_factors for fast optimization
+  std::optional<gtsam::LinearContainerFactor> m_fast_linear = std::nullopt;
 
   // Scan j -- scan i -- Constraints
   // Note that j > i
-  // Note that these have to be modified when we rematch.
+  // These have to be modified when we rematch.
   using PairwiseConstraintsIndex = tsl::robin_map<
       FrameIndex, tsl::robin_map<FrameIndex, std::tuple<feature::PlanePoint::Ptr,
                                                         feature::PointPoint::Ptr>>>;
   PairwiseConstraintsIndex m_constraints;
-
-  // keyframe management
-  std::deque<FrameIndex> m_recent_frame_indices;
-  // Could combine these into a single dataset structure
-  std::deque<FrameIndex> m_keyframe_indices;
-  tsl::robin_map<FrameIndex, size_t> m_keyframe_unused_count;
-  tsl::robin_map<FrameIndex, size_t> m_frame_size;
 
 public:
   ConstraintManager() : m_params() {};
   ConstraintManager(const Params &params) : m_params(params) {}
 
   // ------------------------- Doers ------------------------- //
-  // Add all the necessary priors and initial estimates
-  void
-  initialize(const gtsam::Pose3 &initial_pose,
-             std::optional<gtsam::imuBias::ConstantBias> initial_bias = std::nullopt,
-             size_t initial_idx = 0) noexcept;
-
   // Get all the constraints for a given frame going backward
   // If they don't exist, a new one will be created
   tsl::robin_map<FrameIndex,
@@ -115,12 +121,7 @@ public:
 
   // ------------------------- Setters ------------------------- //
   // Add a new pose to the graph
-  void add_pose(FrameIndex frame, const gtsam::Pose3 &pose) noexcept;
-
-  // Add a keyframe ratio in
-  void add_frame_size(FrameIndex frame, size_t size) noexcept {
-    m_frame_size.insert_or_assign(frame, size);
-  }
+  void add_pose(FrameIndex idx, const gtsam::Pose3 &pose, size_t size) noexcept;
 
   // Update an existing pose or values
   void update_pose(const FrameIndex &frame, const gtsam::Pose3 &pose) noexcept;
@@ -131,13 +132,6 @@ public:
   gtsam::NonlinearFactorGraph get_single_graph() noexcept;
   const gtsam::Pose3 get_pose(const FrameIndex &frame) const noexcept;
   const gtsam::Values &get_values() const noexcept { return m_values; }
-  const size_t get_num_keyframes() const noexcept {
-    return m_keyframe_indices.size();
-  }
-  const size_t get_num_recent_frames() const noexcept {
-    return m_recent_frame_indices.size();
-  }
-  const bool initialized() const noexcept { return !m_values.empty(); }
   const size_t num_recent_connections(const FrameIndex &frame) const noexcept;
 };
 

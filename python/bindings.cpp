@@ -64,7 +64,6 @@ public:
 
   static std::map<std::string, evalio::Param> default_params() {
     return {
-        {"max_dist_min", 0.1},
         {"max_dist_max", 0.8},
         {"max_dist_map", 0.1},
         {"new_pose_threshold", 1e-4},
@@ -142,9 +141,7 @@ public:
   set_params(std::map<std::string, evalio::Param> params) override {
     for (const auto &[key, value] : params) {
       // handle form parameters
-      if (key == "max_dist_min") {
-        params_.max_dist_min = std::get<double>(value);
-      } else if (key == "max_dist_max") {
+      if (key == "max_dist_max") {
         params_.max_dist_max = std::get<double>(value);
       } else if (key == "new_pose_threshold") {
         params_.new_pose_threshold = std::get<double>(value);

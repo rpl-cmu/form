@@ -41,7 +41,6 @@ public:
     ConstraintManager::Params constraints;
 
     // points must be within this percent of range to be matched
-    double max_dist_min = 0.1;
     double max_dist_max = 1.0;
     double max_dist_map = 0.1;
     double new_pose_threshold = 1e-4;

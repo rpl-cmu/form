@@ -1,6 +1,6 @@
 pipelines:
   - pipeline: form
-    name: clean_constraints
+    name: rework_constraints
 
 datasets:
   # ncd20

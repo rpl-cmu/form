@@ -36,8 +36,17 @@ std::tuple<std::vector<PlanarFeat>, std::vector<PointFeat>>
 Estimator::registerScan(const std::vector<Eigen::Vector3f> &scan) noexcept {
   constexpr auto seq = std::make_index_sequence<2>{};
 
-  // ------------------------- Initial estimates -------------------------
-  // With constant velocity
+  //
+  // ###################### Feature Extraction ###################### //
+  //
+  const auto keypoints = m_extractor(scan, m_frame);
+  const auto num_keypoints =
+      std::get<0>(keypoints).size() + std::get<1>(keypoints).size();
+
+  //
+  // ######################### Optimization ######################### //
+  //
+  // ------------------------- Initialization ------------------------- //
   Pose3 prediction;
   if (m_frame == 0) {
     prediction = gtsam::Pose3::Identity();
@@ -50,17 +59,12 @@ Estimator::registerScan(const std::vector<Eigen::Vector3f> &scan) noexcept {
     // normalize rotation to avoid rounding errors
     prediction = Pose3(prediction.rotation().normalized(), prediction.translation());
   }
+  m_constraints.add_pose(m_frame, prediction, num_keypoints);
 
-  m_constraints.add_pose(m_frame, prediction);
-
-  // ------------------------- Matching ------------------------- //
-  // Create world map
+  // Matching setup
   const auto world_map = tuple::transform(m_keypoint_map, [&](auto &map) {
     return map.to_voxel_map(m_constraints.get_values());
   });
-
-  // Extract keypoints
-  const auto keypoints = m_extractor(scan, m_frame);
 
   auto max_dist_sqrd = m_params.max_dist_max * m_params.max_dist_max;
   auto max_dist_map_sqrd = m_params.max_dist_map * m_params.max_dist_map;
@@ -74,11 +78,10 @@ Estimator::registerScan(const std::vector<Eigen::Vector3f> &scan) noexcept {
     std::get<I>(matches).reserve(std::get<I>(keypoints).size());
   });
 
-  // ----------------------- The actual ICP step ----------------------- //
   for (size_t idx_rematch = 0; idx_rematch < m_params.max_num_rematches;
        ++idx_rematch) {
 
-    // Matching
+    // ----------------------- Matching ----------------------- //
     auto init = m_constraints.get_pose(m_frame);
     tuple::for_seq(seq, [&](auto I) {
       // Clear previous constraints & matches
@@ -116,10 +119,9 @@ Estimator::registerScan(const std::vector<Eigen::Vector3f> &scan) noexcept {
       }
     });
 
-    // ------------------------- Optimization -------------------------
+    // --------------------- Semi-Linearized Optimization --------------------- //
     new_values = m_constraints.optimize(m_params.linearize_when_matching);
 
-    // ------------------------- Criteria Check ------------------------- //
     const auto next_frame_pose_before = m_constraints.get_pose(m_frame);
     const auto next_frame_pose_after = new_values.at<Pose3>(X(m_frame));
     const auto diff =
@@ -130,8 +132,16 @@ Estimator::registerScan(const std::vector<Eigen::Vector3f> &scan) noexcept {
     m_constraints.update_pose(m_frame, next_frame_pose_after);
   }
 
-  // ------------------------- Post ICP ------------------------- //
-  // Move some keypoints into map
+  // ----------------------- Full Nonlinear Optimization ----------------------- //
+  if (m_params.linearize_for_final != m_params.linearize_when_matching) {
+    new_values = m_constraints.optimize(m_params.linearize_for_final);
+  }
+  m_constraints.update_values(new_values);
+
+  //
+  // ########################### Mapping ########################### //
+  //
+  // ------------------------- Map insertions ------------------------- //
   tuple::for_seq(seq, [&](auto I) {
     auto &new_kp_map = std::get<I>(m_keypoint_map).get(m_frame);
     for (const auto &match : std::get<I>(matches)) {
@@ -140,15 +150,6 @@ Estimator::registerScan(const std::vector<Eigen::Vector3f> &scan) noexcept {
       }
     }
   });
-
-  // Optimize once more if requested (if they're the same opt, don't run again)
-  if (m_params.linearize_for_final != m_params.linearize_when_matching) {
-    new_values = m_constraints.optimize(m_params.linearize_for_final);
-  }
-
-  m_constraints.update_values(new_values);
-  m_constraints.add_frame_size(m_frame, std::get<0>(keypoints).size() +
-                                            std::get<1>(keypoints).size());
 
   // ------------------------- Marginalization ------------------------- //
   auto marg_frame = m_constraints.marginalize();
