@@ -1,6 +1,6 @@
 pipelines:
   - pipeline: form
-    name: post_partition_files
+    name: post_remove_point_types
 
 datasets:
   # ncd20

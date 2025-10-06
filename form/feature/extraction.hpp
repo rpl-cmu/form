@@ -1,9 +1,9 @@
 #pragma once
 
 #include "form/feature/type.hpp"
-#include "form/point_types.hpp"
 #include <Eigen/Dense>
 
+#include <Eigen/src/Core/Matrix.h>
 #include <tbb/blocked_range.h>
 #include <tbb/concurrent_vector.h>
 #include <tbb/parallel_for.h>
@@ -31,40 +31,41 @@ struct KeypointExtractionParams {
   // Based on LiDAR info
   double min_norm_squared = 1.0;
   double max_norm_squared = 100.0 * 100.0;
+  int num_columns = 1024;
+  int num_rows = 64;
 };
 
 template <typename Point>
-std::vector<bool> compute_valid_points(const PointCloud<Point> &scan,
+std::vector<bool> compute_valid_points(const std::vector<Point> &scan,
                                        const KeypointExtractionParams &params) {
-  using T = typename Point::type_t;
-  using channel_t = decltype(Point::channel);
+  using T = typename Point::Scalar;
 
-  if (scan.points.size() != scan.num_columns * scan.num_rows) {
+  if (scan.size() != params.num_columns * params.num_rows) {
     throw std::runtime_error("Provided scan does not match the expected size " +
-                             std::to_string(scan.num_columns * scan.num_rows) +
-                             " != " + std::to_string(scan.points.size()));
+                             std::to_string(params.num_columns * params.num_rows) +
+                             " != " + std::to_string(scan.size()));
   }
 
-  std::vector<bool> mask(scan.points.size(), true);
-  size_t num_points = scan.points.size();
+  std::vector<bool> mask(scan.size(), true);
+  size_t num_points = scan.size();
 
   // Compute the valid points based on the parameters
   // Structured search (search over each scan line individually over all points
   // [except points on scan line ends]
-  for (size_t scan_line_idx = 0; scan_line_idx < scan.num_rows; scan_line_idx++) {
-    for (size_t line_pt_idx = 0; line_pt_idx < scan.num_columns; line_pt_idx++) {
-      const size_t idx = (scan_line_idx * scan.num_columns) + line_pt_idx;
+  for (size_t scan_line_idx = 0; scan_line_idx < params.num_rows; scan_line_idx++) {
+    for (size_t line_pt_idx = 0; line_pt_idx < params.num_columns; line_pt_idx++) {
+      const size_t idx = (scan_line_idx * params.num_columns) + line_pt_idx;
 
       // CHECK 1: Due to edge effects, the first and last neighbor_points points
       // of each scan line are invalid
       if (line_pt_idx < params.neighbor_points ||
-          line_pt_idx >= scan.num_columns - params.neighbor_points) {
+          line_pt_idx >= params.num_columns - params.neighbor_points) {
         mask[idx] = false;
         continue;
       }
 
       // CHECK 2: Is the point in the valid range of the LiDAR
-      const Point &point = scan.points[idx];
+      const Point &point = scan[idx];
       const double range2 = point.squaredNorm();
       if (range2 < params.min_norm_squared || range2 > params.max_norm_squared) {
         mask[idx] = false;
@@ -98,18 +99,18 @@ template <typename T> struct Curvature {
 };
 
 template <typename Point>
-std::vector<Curvature<typename Point::type_t>>
-extract_curvature(const PointCloud<Point> &scan, const std::vector<bool> &mask,
+std::vector<Curvature<typename Point::Scalar>>
+extract_curvature(const std::vector<Point> &scan, const std::vector<bool> &mask,
                   const KeypointExtractionParams &params, size_t scan_idx) noexcept {
 
-  using T = typename Point::type_t;
+  using T = typename Point::Scalar;
   std::vector<Curvature<T>> curvature;
 
   // Structured search (search over each scan line individually over all points
   // [except points on scan line ends]
-  for (size_t scan_line_idx = 0; scan_line_idx < scan.num_rows; scan_line_idx++) {
-    for (size_t line_pt_idx = 0; line_pt_idx < scan.num_columns; line_pt_idx++) {
-      const size_t idx = (scan_line_idx * scan.num_columns) + line_pt_idx;
+  for (size_t scan_line_idx = 0; scan_line_idx < params.num_rows; scan_line_idx++) {
+    for (size_t line_pt_idx = 0; line_pt_idx < params.num_columns; line_pt_idx++) {
+      const size_t idx = (scan_line_idx * params.num_columns) + line_pt_idx;
       // If not valid, input max curvature
       if (!mask[idx]) {
         curvature.emplace_back(idx, std::numeric_limits<T>::max());
@@ -117,14 +118,14 @@ extract_curvature(const PointCloud<Point> &scan, const std::vector<bool> &mask,
       // If valid compute the curvature
       else {
         // Initialize with the difference term
-        double dx = -(2.0 * params.neighbor_points) * scan.points[idx].x;
-        double dy = -(2.0 * params.neighbor_points) * scan.points[idx].y;
-        double dz = -(2.0 * params.neighbor_points) * scan.points[idx].z;
+        double dx = -(2.0 * params.neighbor_points) * scan[idx].x();
+        double dy = -(2.0 * params.neighbor_points) * scan[idx].y();
+        double dz = -(2.0 * params.neighbor_points) * scan[idx].z();
         // Iterate over neighbors and accumulate
         for (size_t n = 1; n <= params.neighbor_points; n++) {
-          dx = dx + scan.points[idx - n].x + scan.points[idx + n].x;
-          dy = dy + scan.points[idx - n].y + scan.points[idx + n].y;
-          dz = dz + scan.points[idx - n].z + scan.points[idx + n].z;
+          dx = dx + scan[idx - n].x() + scan[idx + n].x();
+          dy = dy + scan[idx - n].y() + scan[idx + n].y();
+          dz = dz + scan[idx - n].z() + scan[idx + n].z();
         }
         curvature.emplace_back(idx, dx * dx + dy * dy + dz * dz);
       }
@@ -205,7 +206,7 @@ inline void extract_point(const size_t &sector_start_point,
 
 template <typename Point>
 std::optional<size_t> find_closest(const Point &point, const size_t &start,
-                                   const size_t &end, const PointCloud<Point> &scan,
+                                   const size_t &end, const std::vector<Point> &scan,
                                    const std::vector<bool> &valid_mask) {
   std::optional<size_t> closest_point = std::nullopt;
   double min_dist2 = std::numeric_limits<double>::max();
@@ -213,7 +214,7 @@ std::optional<size_t> find_closest(const Point &point, const size_t &start,
     if (!valid_mask[idx]) {
       continue;
     }
-    const double dist2 = (scan.points[idx].vec4() - point.vec4()).squaredNorm();
+    const double dist2 = (scan[idx] - point).squaredNorm();
     if (dist2 < min_dist2) {
       min_dist2 = dist2;
       closest_point = idx;
@@ -223,14 +224,14 @@ std::optional<size_t> find_closest(const Point &point, const size_t &start,
 }
 
 template <typename Point>
-void find_neighbors(const size_t &idx, const PointCloud<Point> &scan,
+void find_neighbors(const size_t &idx, const std::vector<Point> &scan,
                     const KeypointExtractionParams &params,
                     std::vector<Point> &out) {
   // search in the positive direction
-  const auto &point = scan.points[idx];
+  const auto &point = scan[idx];
   for (size_t i = 1; i <= params.neighbor_points; i++) {
-    const auto &neighbor = scan.points[idx + i];
-    const double range2 = (neighbor.vec4() - point.vec4()).squaredNorm();
+    const auto &neighbor = scan[idx + i];
+    const double range2 = (neighbor - point).squaredNorm();
     if (range2 < params.radius * params.radius) {
       out.push_back(neighbor);
     } else {
@@ -240,8 +241,8 @@ void find_neighbors(const size_t &idx, const PointCloud<Point> &scan,
 
   // search in the negative direction
   for (size_t i = 1; i <= params.neighbor_points; i++) {
-    const auto &neighbor = scan.points[idx - i];
-    const double range2 = (neighbor.vec4() - point.vec4()).squaredNorm();
+    const auto &neighbor = scan[idx - i];
+    const double range2 = (neighbor - point).squaredNorm();
     if (range2 < params.radius * params.radius) {
       out.push_back(neighbor);
     } else {
@@ -251,15 +252,15 @@ void find_neighbors(const size_t &idx, const PointCloud<Point> &scan,
 }
 
 template <typename Point>
-std::optional<Eigen::Matrix<typename Point::type_t, 3, 1>>
-compute_normal(const size_t &idx, const PointCloud<Point> &scan,
+std::optional<Eigen::Matrix<typename Point::Scalar, 3, 1>>
+compute_normal(const size_t &idx, const std::vector<Point> &scan,
                const KeypointExtractionParams &params,
                const std::vector<bool> &valid_mask) noexcept {
-  using T = typename Point::type_t;
-  const size_t scan_line_idx = idx / scan.num_columns;
-  const auto start = scan.points.cbegin();
-  const auto end = scan.points.cend();
-  const auto &point = scan.points[idx];
+  using T = typename Point::Scalar;
+  const size_t scan_line_idx = idx / params.num_columns;
+  const auto start = scan.cbegin();
+  const auto end = scan.cend();
+  const auto &point = scan[idx];
 
   // First find neighbors on own scan line
   std::vector<Point> neighbors;
@@ -270,26 +271,26 @@ compute_normal(const size_t &idx, const PointCloud<Point> &scan,
   // Get the neighbors of the point on the previous scan line
   if (scan_line_idx > 0) {
     const size_t prev_scan_line_idx = scan_line_idx - 1;
-    const auto closest_idx =
-        find_closest(point, scan.num_columns * prev_scan_line_idx,
-                     scan.num_columns * (prev_scan_line_idx + 1), scan, valid_mask);
+    const auto closest_idx = find_closest(
+        point, params.num_columns * prev_scan_line_idx,
+        params.num_columns * (prev_scan_line_idx + 1), scan, valid_mask);
     if (closest_idx.has_value()) {
       found_other_scanline = true;
-      neighbors.push_back(scan.points[*closest_idx]);
+      neighbors.push_back(scan[*closest_idx]);
       find_neighbors(*closest_idx, scan, params, neighbors);
     }
   }
 
   // Get the neighbors of the point on the next scan line
-  if (scan_line_idx < scan.num_rows - 1) {
+  if (scan_line_idx < params.num_rows - 1) {
     // std::printf("---- Searching next scan line %zu\n", scan_line_idx + 1);
     const size_t next_scan_line_idx = scan_line_idx + 1;
-    const auto closest_idx =
-        find_closest(point, scan.num_columns * next_scan_line_idx,
-                     scan.num_columns * (next_scan_line_idx + 1), scan, valid_mask);
+    const auto closest_idx = find_closest(
+        point, params.num_columns * next_scan_line_idx,
+        params.num_columns * (next_scan_line_idx + 1), scan, valid_mask);
     if (closest_idx.has_value()) {
       found_other_scanline = true;
-      neighbors.push_back(scan.points[*closest_idx]);
+      neighbors.push_back(scan[*closest_idx]);
       find_neighbors(closest_idx.value(), scan, params, neighbors);
     }
   }
@@ -303,7 +304,7 @@ compute_normal(const size_t &idx, const PointCloud<Point> &scan,
   // std::printf("---- Found %zu neighbors\n", neighbors.size());
   Eigen::Matrix<T, Eigen::Dynamic, 3> A(neighbors.size(), 3);
   for (size_t j = 0; j < neighbors.size(); ++j) {
-    A.row(j) = neighbors[j].vec3() - point.vec3();
+    A.row(j) = neighbors[j] - point;
   }
   A /= neighbors.size();
   Eigen::Matrix<T, 3, 3> Cov = A.transpose() * A;
@@ -321,11 +322,10 @@ compute_normal(const size_t &idx, const PointCloud<Point> &scan,
 // Assume the points are in row-major order
 template <typename Point>
 [[nodiscard]] tbb::concurrent_vector<PointXYZNTS<double>>
-extract_keypoints(const PointCloud<Point> &scan,
+extract_keypoints(const std::vector<Point> &scan,
                   const KeypointExtractionParams &params, size_t scan_idx) noexcept {
-  using T = typename Point::type_t;
-  using channel_t = decltype(Point::channel);
-  const size_t points_per_sector = scan.num_columns / params.num_sectors;
+  using T = typename Point::Scalar;
+  const size_t points_per_sector = params.num_columns / params.num_sectors;
 
   // First we validate that all the points are good
   std::vector<bool> valid_mask = compute_valid_points(scan, params);
@@ -337,16 +337,16 @@ extract_keypoints(const PointCloud<Point> &scan,
   // Next get the planar features
   std::vector<size_t> planar_indices;
   std::vector<bool> used_points = valid_mask;
-  for (size_t scan_line_idx = 0; scan_line_idx < scan.num_rows; scan_line_idx++) {
+  for (size_t scan_line_idx = 0; scan_line_idx < params.num_rows; scan_line_idx++) {
     // Independently detect features in each sector of this scan_line
     for (size_t sector_idx = 0; sector_idx < params.num_sectors; sector_idx++) {
       // Get the point index of the sector start and sector end
       const size_t sector_start_pt =
-          (scan_line_idx * scan.num_columns) + (sector_idx * points_per_sector);
+          (scan_line_idx * params.num_columns) + (sector_idx * points_per_sector);
       // Special case for end point as we add any reminder points to the last
       // sector
       const size_t sector_end_pt = (sector_idx == params.num_sectors - 1)
-                                       ? ((scan_line_idx + 1) * scan.num_columns)
+                                       ? ((scan_line_idx + 1) * params.num_columns)
                                        : sector_start_pt + points_per_sector;
 
       // Sort the points within the sector based on curvature
@@ -368,26 +368,26 @@ extract_keypoints(const PointCloud<Point> &scan,
   // Get a mask of points and their neighborhood that were selected as planar
   // features
   // TODO: This may miss some points on the edges of neighborhoods
-  std::vector<bool> used_points_copy(scan.points.size());
+  std::vector<bool> used_points_copy(scan.size());
   for (size_t idx = 0; idx < used_points.size(); idx++) {
     used_points_copy[idx] = used_points[idx] == valid_mask[idx];
   }
 
   // Do a basic filter for them as well
-  for (size_t scan_line_idx = 0; scan_line_idx < scan.num_rows; scan_line_idx++) {
-    for (size_t line_pt_idx = 0; line_pt_idx < scan.num_columns; line_pt_idx++) {
-      const size_t idx = (scan_line_idx * scan.num_columns) + line_pt_idx;
+  for (size_t scan_line_idx = 0; scan_line_idx < params.num_rows; scan_line_idx++) {
+    for (size_t line_pt_idx = 0; line_pt_idx < params.num_columns; line_pt_idx++) {
+      const size_t idx = (scan_line_idx * params.num_columns) + line_pt_idx;
 
       // CHECK 1: Due to edge effects, the first and last neighbor_points points
       // of each scan line are invalid
       if (line_pt_idx < params.neighbor_points ||
-          line_pt_idx >= scan.num_columns - params.neighbor_points) {
+          line_pt_idx >= params.num_columns - params.neighbor_points) {
         used_points_copy[idx] = false;
         continue;
       }
 
       // CHECK 2: Is the point in the valid range of the LiDAR
-      const Point &point = scan.points[idx];
+      const Point &point = scan[idx];
       const double range2 = point.squaredNorm();
       if (range2 < params.min_norm_squared || range2 > params.max_norm_squared) {
         used_points_copy[idx] = false;
@@ -396,15 +396,15 @@ extract_keypoints(const PointCloud<Point> &scan,
     }
   }
 
-  for (size_t scan_line_idx = 0; scan_line_idx < scan.num_rows; scan_line_idx++) {
+  for (size_t scan_line_idx = 0; scan_line_idx < params.num_rows; scan_line_idx++) {
     // Independently detect features in each sector of this scan_line
     for (size_t sector_idx = 0; sector_idx < params.num_sectors; sector_idx++) {
       const size_t sector_start_pt =
-          (scan_line_idx * scan.num_columns) + (sector_idx * points_per_sector);
+          (scan_line_idx * params.num_columns) + (sector_idx * points_per_sector);
       // Special case for end point as we add any reminder points to the last
       // sector
       const size_t sector_end_pt = (sector_idx == params.num_sectors - 1)
-                                       ? ((scan_line_idx + 1) * scan.num_columns)
+                                       ? ((scan_line_idx + 1) * params.num_columns)
                                        : sector_start_pt + points_per_sector;
 
       extract_point(sector_start_pt, sector_end_pt, params, point_indices,
@@ -421,14 +421,14 @@ extract_keypoints(const PointCloud<Point> &scan,
                     [&](const tbb::blocked_range<size_t_iterator> &range) {
                       for (auto it = range.begin(); it != range.end(); ++it) {
                         const size_t idx = *it;
-                        const Point &point = scan.points[idx];
+                        const Point &point = scan[idx];
                         std::optional<Eigen::Matrix<T, 3, 1>> normal =
                             compute_normal(idx, scan, params, valid_mask);
                         if (normal.has_value()) {
                           result.emplace_back(
-                              static_cast<double>(point.x),
-                              static_cast<double>(point.y),
-                              static_cast<double>(point.z),
+                              static_cast<double>(point.x()),
+                              static_cast<double>(point.y()),
+                              static_cast<double>(point.z()),
                               static_cast<double>(normal.value().x()),
                               static_cast<double>(normal.value().y()),
                               static_cast<double>(normal.value().z()),
@@ -439,9 +439,10 @@ extract_keypoints(const PointCloud<Point> &scan,
 
   // Add the point features
   for (const size_t &idx : point_indices) {
-    const Point &point = scan.points[idx];
-    result.emplace_back(static_cast<double>(point.x), static_cast<double>(point.y),
-                        static_cast<double>(point.z), 0.0, 0.0, 0.0,
+    const Point &point = scan[idx];
+    result.emplace_back(static_cast<double>(point.x()),
+                        static_cast<double>(point.y()),
+                        static_cast<double>(point.z()), 0.0, 0.0, 0.0,
                         static_cast<size_t>(scan_idx), FeatureType::Point);
   }
 
@@ -455,7 +456,7 @@ struct FeatureExtractor {
   FeatureExtractor(const Params &params) : params(params) {}
 
   template <typename Point>
-  std::vector<PointXYZNTS<double>> operator()(const PointCloud<Point> &scan,
+  std::vector<PointXYZNTS<double>> operator()(const std::vector<Point> &scan,
                                               size_t scan_idx) const {
     auto keypoints = extract_keypoints(scan, params, scan_idx);
     // copy to a std::vector for return

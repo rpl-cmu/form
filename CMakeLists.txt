@@ -26,7 +26,7 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(tsl)
 
-# main target
+# ------------------------- form ------------------------- #
 add_library(FORM
 	form/form.cpp
 	form/feature/factor.cpp
@@ -49,7 +49,6 @@ target_sources(FORM
 		form/optimization/constraints.hpp
 		# core
 		form/form.hpp
-		form/point_types.hpp
 )
 target_link_libraries(FORM
 	PUBLIC
@@ -58,11 +57,6 @@ target_link_libraries(FORM
 	TBB::tbb
 	tsl::robin_map
 )
-# target_include_directories(FORM
-# 	PUBLIC
-# 	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/form>
-# 	$<INSTALL_INTERFACE:include/form>
-# )
 
 # Tests
 if(${FORM_BUILD_TESTS})

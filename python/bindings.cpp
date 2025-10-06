@@ -4,7 +4,6 @@
 #include "form/feature/extraction.hpp"
 #include "form/form.hpp"
 #include "form/mapping/map.hpp"
-#include "form/point_types.hpp"
 
 #include <cstdio>
 #include <gtsam/geometry/Pose3.h>
@@ -43,15 +42,8 @@ template <typename Point> evalio::Point point_to_evalio(const Point &point) {
   };
 }
 
-form::PointXYZICD<float> point_to_form(const evalio::Point &point) {
-  return {
-      .x = static_cast<float>(point.x),
-      .y = static_cast<float>(point.y),
-      .z = static_cast<float>(point.z),
-      ._ = 0.0,
-      .intensity = 0, // TODO: Figure out this conversion later
-      .channel = point.row,
-  };
+Eigen::Vector3f point_to_form(const evalio::Point &point) {
+  return Eigen::Vector3f(point.x, point.y, point.z);
 }
 
 gtsam::Matrix3 std_to_mat3(double std) {
@@ -73,9 +65,6 @@ public:
   // helper params
   gtsam::Pose3 lidar_T_imu_ = gtsam::Pose3::Identity();
   evalio::Duration delta_time_;
-  size_t num_columns_ = 0;
-  size_t num_rows_ = 0;
-
   evalio::SE3 current_pose = evalio::SE3::identity();
 
   // ------------------------- Info ------------------------- //
@@ -149,9 +138,9 @@ public:
         params.min_range * params.min_range;
     params_.keypointExtraction.max_norm_squared =
         params.max_range * params.max_range;
+    params_.keypointExtraction.num_columns = params.num_columns;
+    params_.keypointExtraction.num_rows = params.num_rows;
     delta_time_ = params.delta_time();
-    num_columns_ = params.num_columns;
-    num_rows_ = params.num_rows;
   }
 
   // Set the transformation from IMU to LiDAR
@@ -225,15 +214,13 @@ public:
   std::map<std::string, std::vector<evalio::Point>>
   add_lidar(evalio::LidarMeasurement mm) override {
     // convert to evalio
-    form::PointCloud<form::PointXYZICD<float>> scan;
+    std::vector<Eigen::Vector3f> scan;
     auto start = mm.stamp;
     auto end = mm.stamp + delta_time_;
 
     // TODO: Use start or end as the stamp?
-    scan.num_columns = num_columns_;
-    scan.num_rows = num_rows_;
     for (const auto &point : mm.points) {
-      scan.points.push_back(point_to_form(point));
+      scan.push_back(point_to_form(point));
     }
 
     // run the estimator
@@ -299,25 +286,9 @@ NB_MODULE(_core, m) {
         [](const std::vector<Eigen::Vector3d> &points,
            const form::feature::KeypointExtractionParams &params,
            evalio::LidarParams &lidar_params) {
-          // Convert the input points to form::PointXYZICD<float>
-          form::PointCloud<form::PointXYZICD<float>> scan;
-          scan.num_columns = lidar_params.num_columns;
-          scan.num_rows = lidar_params.num_rows;
-
-          for (const auto &point : points) {
-            scan.points.emplace_back(form::PointXYZICD<float>{
-                .x = static_cast<float>(point.x()),
-                .y = static_cast<float>(point.y()),
-                .z = static_cast<float>(point.z()),
-                ._ = 0.0f,      // Placeholder for unused field
-                .intensity = 0, // Placeholder for intensity
-                .channel = 0,   // Placeholder for channel
-            });
-          }
-
           // Call the keypoint extraction function from the Tclio class
           tbb::concurrent_vector<form::feature::PointXYZNTS<double>> keypoints =
-              form::feature::extract_keypoints(scan, params, 0);
+              form::feature::extract_keypoints(points, params, 0);
 
           // return a tuple of (planar_points, normals, point_points)
           std::vector<Eigen::Vector3d> planar_points;

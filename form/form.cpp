@@ -1,4 +1,6 @@
 #include "form/form.hpp"
+#include <Eigen/src/Core/Matrix.h>
+#include <vector>
 
 namespace form {
 
@@ -32,7 +34,7 @@ void Estimator::reset(const Estimator::Params &params) noexcept {
 }
 
 std::vector<Keypoint_t>
-Estimator::registerScan(PointCloud<PointXYZICD<float>> scan) noexcept {
+Estimator::registerScan(const std::vector<Eigen::Vector3f> &scan) noexcept {
 
   // ------------------------- Initial estimates -------------------------
   // With constant velocity

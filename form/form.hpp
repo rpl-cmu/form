@@ -3,7 +3,6 @@
 #include "form/feature/extraction.hpp"
 #include "form/mapping/map.hpp"
 #include "form/optimization/constraints.hpp"
-#include "form/point_types.hpp"
 
 #include <gtsam/geometry/Pose3.h>
 #include <gtsam/inference/Symbol.h>
@@ -74,13 +73,8 @@ public:
     return m_constraints.get_pose(m_frame - 1);
   }
 
-  std::vector<Keypoint_t> registerScan(PointCloud<PointXYZICD<float>> scan) noexcept;
-
-  std::vector<std::function<void(
-      const PointCloud<PointXYZICD<float>> &imu_scan, size_t frame_idx,
-      const std::vector<Keypoint_t> &keypoints, const gtsam::Values &values,
-      const gtsam::NonlinearFactorGraph &graph, const VoxelMap &world_map)>>
-      callbacks;
+  std::vector<Keypoint_t>
+  registerScan(const std::vector<Eigen::Vector3f> &scan) noexcept;
 };
 
 } // namespace form
