@@ -1,6 +1,6 @@
 pipelines:
   - pipeline: form
-    name: post_remove_point_types
+    name: rename_types
 
 datasets:
   # ncd20

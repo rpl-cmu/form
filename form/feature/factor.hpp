@@ -6,7 +6,6 @@
 #include <vector>
 
 #include "form/feature/type.hpp"
-#include "form/mapping/map.hpp"
 #include "form/optimization/gtsam.h"
 
 namespace form::feature {
@@ -27,7 +26,7 @@ struct PlanePoint {
 
   PlanePoint() = default;
 
-  void push_back(const Keypoint_t &p_i_, const Keypoint_t &p_j_) {
+  void push_back(const PlanarFeat &p_i_, const PlanarFeat &p_j_) {
     p_i.insert(p_i.end(), {p_i_.x, p_i_.y, p_i_.z});
     n_i.insert(n_i.end(), {p_i_.nx, p_i_.ny, p_i_.nz});
     p_j.insert(p_j.end(), {p_j_.x, p_j_.y, p_j_.z});
@@ -59,7 +58,7 @@ struct PointPoint {
   size_t num_residuals() const noexcept { return p_i.size(); }
   size_t num_constraints() const noexcept { return p_i.size() / 3; }
 
-  void push_back(const Keypoint_t &p_i_, const Keypoint_t &p_j_) {
+  void push_back(const PointFeat &p_i_, const PointFeat &p_j_) {
     p_i.insert(p_i.end(), {p_i_.x, p_i_.y, p_i_.z});
     p_j.insert(p_j.end(), {p_j_.x, p_j_.y, p_j_.z});
   }

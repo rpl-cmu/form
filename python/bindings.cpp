@@ -3,7 +3,6 @@
 
 #include "form/feature/extraction.hpp"
 #include "form/form.hpp"
-#include "form/mapping/map.hpp"
 
 #include <cstdio>
 #include <gtsam/geometry/Pose3.h>
@@ -15,10 +14,9 @@
 #include <nanobind/stl/tuple.h>
 #include <nanobind/stl/variant.h>
 #include <nanobind/stl/vector.h>
+#include <utility>
 
 namespace nb = nanobind;
-
-constexpr float pi = 3.14159265358979323846f;
 
 // ------------------------- Helpers ------------------------- //
 gtsam::Pose3 pose_to_gtsam(const evalio::SE3 &pose) {
@@ -46,18 +44,10 @@ Eigen::Vector3f point_to_form(const evalio::Point &point) {
   return Eigen::Vector3f(point.x, point.y, point.z);
 }
 
-gtsam::Matrix3 std_to_mat3(double std) {
-  return gtsam::Matrix3::Identity() * (std * std);
-}
-
-gtsam::Matrix6 std_to_mat6(double std) {
-  return gtsam::Matrix6::Identity() * (std * std);
-}
-
 // ------------------------- Pipeline ------------------------- //
-class Tclio : public evalio::Pipeline {
+class FORM : public evalio::Pipeline {
 public:
-  Tclio() : evalio::Pipeline(), estimator_(form::Estimator::Params()), params_() {}
+  FORM() : evalio::Pipeline(), estimator_(form::Estimator::Params()), params_() {}
 
   form::Estimator estimator_;
   form::Estimator::Params params_;
@@ -104,26 +94,25 @@ public:
 
   // Returns the current submap of the environment
   const std::map<std::string, std::vector<evalio::Point>> map() override {
-    auto voxel_map = form::Keypoint_t::Map::from_keypoint_map(
-        estimator_.m_keypoint_map, estimator_.m_constraints.get_values());
+    const auto world_map =
+        tuple_transform(estimator_.m_keypoint_map, [&](auto &map) {
+          return map.to_voxel_map(estimator_.m_constraints.get_values());
+        });
 
+    std::tuple<std::string, std::string> map_names = {"planar", "point"};
     std::map<std::string, std::vector<evalio::Point>> points;
 
-    points.insert({"planar", {}});
-    auto &all_planar = points["planar"];
-    for (const auto &[_, voxel] : voxel_map.m_data_1) {
-      for (const auto &point : voxel) {
-        all_planar.push_back(point_to_evalio(point));
-      }
-    }
+    for_sequence(std::make_index_sequence<2>{}, [&](auto I) {
+      const auto name = std::get<I>(map_names);
+      points.insert({name, {}});
+      auto &vec = points[name];
 
-    points.insert({"point", {}});
-    auto &all_point = points["point"];
-    for (const auto &[_, voxel] : voxel_map.m_data_2) {
-      for (const auto &point : voxel) {
-        all_point.push_back(point_to_evalio(point));
+      for (const auto &[_, voxel] : std::get<I>(world_map)) {
+        for (const auto &point : voxel) {
+          vec.push_back(point_to_evalio(point));
+        }
       }
-    }
+    });
 
     return points;
   }
@@ -224,7 +213,7 @@ public:
     }
 
     // run the estimator
-    auto keypoints = estimator_.registerScan(scan);
+    auto [planar_kp, point_kp] = estimator_.registerScan(scan);
     current_pose =
         pose_to_evalio(estimator_.current_lidar_estimate() * lidar_T_imu_);
 
@@ -233,15 +222,14 @@ public:
                                                                 {"point", {}}};
     auto &all_planar = points["planar"];
     auto &all_point = points["point"];
-    for (const auto &point : keypoints) {
-      // put keypoints back into lidar frame for visualization purposes
+    for (const auto &point : planar_kp) {
       const auto ev_point = point_to_evalio(point);
-      // all_planar.push_back(ev_point);
-      if (point.type() == 0) {
-        all_planar.push_back(ev_point);
-      } else {
-        all_point.push_back(ev_point);
-      }
+      all_planar.push_back(ev_point);
+    }
+
+    for (const auto &point : point_kp) {
+      const auto ev_point = point_to_evalio(point);
+      all_point.push_back(ev_point);
     }
 
     return points;
@@ -255,11 +243,11 @@ NB_MODULE(_core, m) {
 
   // Only have to override the static methods here
   // All the others will be automatically inherited from the base class
-  nb::class_<Tclio, evalio::Pipeline>(m, "Tclio")
+  nb::class_<FORM, evalio::Pipeline>(m, "FORM")
       .def(nb::init<>())
-      .def_static("name", &Tclio::name)
-      .def_static("url", &Tclio::url)
-      .def_static("default_params", &Tclio::default_params);
+      .def_static("name", &FORM::name)
+      .def_static("url", &FORM::url)
+      .def_static("default_params", &FORM::default_params);
 
   // Expose extraction methods too
   nb::class_<form::feature::KeypointExtractionParams>(m, "KeypointExtractionParams")
@@ -280,28 +268,30 @@ NB_MODULE(_core, m) {
       .def_rw("min_norm_squared",
               &form::feature::KeypointExtractionParams::min_norm_squared)
       .def_rw("max_norm_squared",
-              &form::feature::KeypointExtractionParams::max_norm_squared);
+              &form::feature::KeypointExtractionParams::max_norm_squared)
+      .def_rw("num_rows", &form::feature::KeypointExtractionParams::num_rows)
+      .def_rw("num_columns", &form::feature::KeypointExtractionParams::num_columns);
 
   m.def("extract_keypoints",
         [](const std::vector<Eigen::Vector3d> &points,
            const form::feature::KeypointExtractionParams &params,
            evalio::LidarParams &lidar_params) {
           // Call the keypoint extraction function from the Tclio class
-          tbb::concurrent_vector<form::feature::PointXYZNTS<double>> keypoints =
+          auto [planar_keypoints, point_keypoints] =
               form::feature::extract_keypoints(points, params, 0);
 
           // return a tuple of (planar_points, normals, point_points)
           std::vector<Eigen::Vector3d> planar_points;
           std::vector<Eigen::Vector3d> normals;
           std::vector<Eigen::Vector3d> point_points;
-          for (const auto &keypoint : keypoints) {
-            if (keypoint.kind == form::feature::FeatureType::Planar) {
-              planar_points.emplace_back(keypoint.x, keypoint.y, keypoint.z);
-              normals.emplace_back(keypoint.nx, keypoint.ny, keypoint.nz);
-            } else if (keypoint.kind == form::feature::FeatureType::Point) {
-              point_points.emplace_back(keypoint.x, keypoint.y, keypoint.z);
-            }
+          for (const auto &keypoint : planar_keypoints) {
+            planar_points.emplace_back(keypoint.x, keypoint.y, keypoint.z);
+            normals.emplace_back(keypoint.nx, keypoint.ny, keypoint.nz);
           }
+          for (const auto &keypoint : point_keypoints) {
+            point_points.emplace_back(keypoint.x, keypoint.y, keypoint.z);
+          }
+
           return std::make_tuple(planar_points, normals, point_points);
         });
 }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "form/feature/extraction.hpp"
+#include "form/feature/type.hpp"
 #include "form/mapping/map.hpp"
 #include "form/optimization/constraints.hpp"
 
@@ -17,14 +18,35 @@
 #include <Eigen/Core>
 #include <vector>
 
+// https://www.cppstories.com/2022/tuple-iteration-apply/
+template <typename TupleT, typename Fn>
+[[nodiscard]] auto tuple_transform(TupleT &&tp, Fn &&fn) {
+  return std::apply(
+      [&fn](auto &&...args) {
+        return std::make_tuple(fn(std::forward<decltype(args)>(args))...);
+      },
+      std::forward<TupleT>(tp));
+}
+
+template <typename TupleT, typename Fn> void for_each(TupleT &&tp, Fn &&fn) {
+  std::apply(
+      [&fn](auto &&...args) { (fn(std::forward<decltype(args)>(args)), ...); },
+      std::forward<TupleT>(tp));
+}
+
+template <typename T, T... S, typename F>
+constexpr void for_sequence(std::integer_sequence<T, S...>, F &&f) {
+  (void(f(std::integral_constant<T, S>{})), ...);
+}
+
 namespace form {
 
-struct Match {
-  Keypoint_t query;
-  Keypoint_t point;
+template <typename Point> struct Match {
+  Point query;
+  Point point;
   double dist_sqrd;
 
-  Match(const Keypoint_t &q, const Keypoint_t &p, double d_sqrd)
+  Match(const Point &q, const Point &p, double d_sqrd)
       : query(q), point(p), dist_sqrd(d_sqrd) {}
 };
 
@@ -58,7 +80,7 @@ public:
   feature::FeatureExtractor m_extractor;
 
   // keypoint map
-  KeypointMap m_keypoint_map;
+  std::tuple<KeypointMap<PlanarFeat>, KeypointMap<PointFeat>> m_keypoint_map;
 
   // current frame
   using FrameIndex = size_t;
@@ -73,7 +95,7 @@ public:
     return m_constraints.get_pose(m_frame - 1);
   }
 
-  std::vector<Keypoint_t>
+  std::tuple<std::vector<PlanarFeat>, std::vector<PointFeat>>
   registerScan(const std::vector<Eigen::Vector3f> &scan) noexcept;
 };
 

@@ -115,7 +115,6 @@ FeatureFactor::FeatureFactor(
     const gtsam::Key i, const gtsam::Key j,
     const std::tuple<PlanePoint::Ptr, PointPoint::Ptr> &constraints,
     double sigma) noexcept
-    //  TODO: Figure out robust noise model later
     : DenseFactor(
           FastIsotropic::Sigma(sigma, std::get<0>(constraints)->num_residuals() +
                                           std::get<1>(constraints)->num_residuals()),

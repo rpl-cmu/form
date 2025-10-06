@@ -8,8 +8,6 @@
 
 #include <tsl/robin_map.h>
 
-#include "form/feature/type.hpp"
-
 using gtsam::symbol_shorthand::X;
 
 template <> struct std::hash<Eigen::Matrix<int, 3, 1>> {
@@ -33,29 +31,26 @@ template <typename Point> struct SearchResult {
   }
 };
 
-// XYZ - Scan idx - Line idx
-using Keypoint_t = feature::PointXYZNTS<double>;
-
 // forward declaration
-class KeypointMap;
+template <typename Point> class KeypointMap;
 
-class VoxelMap {
+template <typename Point> class VoxelMap {
 private:
-  typename Keypoint_t::type_t m_voxel_width = 0.5;
-  tsl::robin_map<Eigen::Matrix<int, 3, 1>, std::vector<Keypoint_t>> m_data;
+  typename Point::type_t m_voxel_width = 0.5;
+  tsl::robin_map<Eigen::Matrix<int, 3, 1>, std::vector<Point>> m_data;
 
   [[nodiscard]] Eigen::Matrix<int, 3, 1>
-  computeCoords(const Keypoint_t &point) const noexcept;
+  computeCoords(const Point &point) const noexcept;
 
 public:
   VoxelMap(double voxel_width) noexcept;
 
-  [[nodiscard]] SearchResult<Keypoint_t>
-  find_closest(const Keypoint_t &queryPoint) const noexcept;
+  [[nodiscard]] SearchResult<Point>
+  find_closest(const Point &queryPoint) const noexcept;
 
-  void push_back(const Keypoint_t &point) noexcept;
+  void push_back(const Point &point) noexcept;
 
-  static VoxelMap from_keypoint_map(const KeypointMap &keypoint_map,
+  static VoxelMap from_keypoint_map(const KeypointMap<Point> &keypoint_map,
                                     const gtsam::Values &values) noexcept;
 
   [[nodiscard]] auto cbegin() const noexcept { return m_data.cbegin(); }
@@ -68,44 +63,25 @@ public:
   [[nodiscard]] auto size() const noexcept { return m_data.size(); }
 };
 
-class VoxelMapDouble {
-private:
-  typename Keypoint_t::type_t m_voxel_width = 0.5;
-
-public:
-  VoxelMap m_data_1;
-  VoxelMap m_data_2;
-  VoxelMapDouble(double voxel_width) noexcept;
-
-  [[nodiscard]] SearchResult<Keypoint_t>
-  find_closest(const Keypoint_t &queryPoint) const;
-
-  void push_back(const Keypoint_t &point);
-
-  static VoxelMapDouble from_keypoint_map(const KeypointMap &keypoint_map,
-                                          const gtsam::Values &values);
-
-  [[nodiscard]] auto size() const noexcept {
-    return m_data_1.size() + m_data_2.size();
-  }
-};
-
-class KeypointMap {
+template <typename Point> class KeypointMap {
   using FrameIndex = size_t;
 
 public:
   struct Params {
-    typename Keypoint_t::type_t voxelWidth = 0.5;
+    typename Point::type_t voxelWidth = 0.5;
   };
 
 public:
   Params m_params;
-  tsl::robin_map<FrameIndex, std::vector<Keypoint_t>> m_frame_keypoints;
+  tsl::robin_map<FrameIndex, std::vector<Point>> m_frame_keypoints;
 
 public:
+  KeypointMap(typename Point::type_t voxel_width) noexcept
+      : m_params{.voxelWidth = voxel_width} {}
+
   KeypointMap(const Params &params) noexcept;
 
-  std::vector<Keypoint_t> &get(const FrameIndex &frame_j) noexcept;
+  std::vector<Point> &get(const FrameIndex &frame_j) noexcept;
 
   void remove(const FrameIndex &frame_j) noexcept;
 
@@ -122,6 +98,10 @@ public:
     }
     return size;
   }
+
+  VoxelMap<Point> to_voxel_map(const gtsam::Values &values) const noexcept;
 };
 
 } // namespace form
+
+#include "form/mapping/map.tpp"

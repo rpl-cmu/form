@@ -321,7 +321,7 @@ compute_normal(const size_t &idx, const std::vector<Point> &scan,
 
 // Assume the points are in row-major order
 template <typename Point>
-[[nodiscard]] tbb::concurrent_vector<PointXYZNTS<double>>
+[[nodiscard]] std::tuple<tbb::concurrent_vector<PlanarFeat>, std::vector<PointFeat>>
 extract_keypoints(const std::vector<Point> &scan,
                   const KeypointExtractionParams &params, size_t scan_idx) noexcept {
   using T = typename Point::Scalar;
@@ -414,8 +414,8 @@ extract_keypoints(const std::vector<Point> &scan,
 
   // Finally extract all normals
   using size_t_iterator = typename std::vector<size_t>::const_iterator;
-  tbb::concurrent_vector<PointXYZNTS<double>> result;
-  result.reserve(planar_indices.size() + point_indices.size());
+  tbb::concurrent_vector<PlanarFeat> result_planar;
+  result_planar.reserve(planar_indices.size() + point_indices.size());
   tbb::parallel_for(tbb::blocked_range<size_t_iterator>{planar_indices.cbegin(),
                                                         planar_indices.cend()},
                     [&](const tbb::blocked_range<size_t_iterator> &range) {
@@ -425,28 +425,28 @@ extract_keypoints(const std::vector<Point> &scan,
                         std::optional<Eigen::Matrix<T, 3, 1>> normal =
                             compute_normal(idx, scan, params, valid_mask);
                         if (normal.has_value()) {
-                          result.emplace_back(
+                          result_planar.emplace_back(
                               static_cast<double>(point.x()),
                               static_cast<double>(point.y()),
                               static_cast<double>(point.z()),
                               static_cast<double>(normal.value().x()),
                               static_cast<double>(normal.value().y()),
                               static_cast<double>(normal.value().z()),
-                              static_cast<size_t>(scan_idx), FeatureType::Planar);
+                              static_cast<size_t>(scan_idx));
                         }
                       }
                     });
 
   // Add the point features
+  std::vector<PointFeat> result_point;
   for (const size_t &idx : point_indices) {
     const Point &point = scan[idx];
-    result.emplace_back(static_cast<double>(point.x()),
-                        static_cast<double>(point.y()),
-                        static_cast<double>(point.z()), 0.0, 0.0, 0.0,
-                        static_cast<size_t>(scan_idx), FeatureType::Point);
+    result_point.emplace_back(
+        static_cast<double>(point.x()), static_cast<double>(point.y()),
+        static_cast<double>(point.z()), static_cast<size_t>(scan_idx));
   }
 
-  return result;
+  return std::make_tuple(result_planar, result_point);
 }
 
 struct FeatureExtractor {
@@ -456,11 +456,12 @@ struct FeatureExtractor {
   FeatureExtractor(const Params &params) : params(params) {}
 
   template <typename Point>
-  std::vector<PointXYZNTS<double>> operator()(const std::vector<Point> &scan,
-                                              size_t scan_idx) const {
-    auto keypoints = extract_keypoints(scan, params, scan_idx);
+  std::tuple<std::vector<PlanarFeat>, std::vector<PointFeat>>
+  operator()(const std::vector<Point> &scan, size_t scan_idx) const {
+    auto [planar, point] = extract_keypoints(scan, params, scan_idx);
     // copy to a std::vector for return
-    return std::vector<PointXYZNTS<double>>(keypoints.begin(), keypoints.end());
+    return std::make_tuple(std::vector<PlanarFeat>(planar.begin(), planar.end()),
+                           point);
   }
 };
 

@@ -31,7 +31,6 @@ add_library(FORM
 	form/form.cpp
 	form/feature/factor.cpp
 	form/optimization/constraints.cpp
-	form/mapping/map.cpp
 )
 target_sources(FORM
 	PUBLIC
@@ -43,10 +42,10 @@ target_sources(FORM
 		form/feature/factor.hpp
 		form/feature/type.hpp
 		form/feature/extraction.hpp
+		# optimization
+		form/optimization/constraints.hpp
 		# mapping
 		form/mapping/map.hpp
-		# base headers
-		form/optimization/constraints.hpp
 		# core
 		form/form.hpp
 )
