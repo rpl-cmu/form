@@ -84,8 +84,7 @@ gtsam::Values ConstraintManager::optimize(bool fast) noexcept {
   // Solve!
 }
 
-std::vector<FrameIndex>
-ConstraintManager::marginalize(bool marginalize_planar) noexcept {
+std::vector<FrameIndex> ConstraintManager::marginalize() noexcept {
   std::vector<FrameIndex> marg_results;
 
   // First we handle recent frames
@@ -107,7 +106,7 @@ ConstraintManager::marginalize(bool marginalize_planar) noexcept {
     }
     // If not, we marginalize it out
     else {
-      marginalize_frame(frame_index, marginalize_planar);
+      marginalize_frame(frame_index);
       marg_results.push_back(frame_index);
     }
   }
@@ -129,7 +128,7 @@ ConstraintManager::marginalize(bool marginalize_planar) noexcept {
       //             m_keyframe_unused_count[keyframe_idx],
       //             m_keyframe_indices.front());
 
-      marginalize_frame(keyframe_idx, true);
+      marginalize_frame(keyframe_idx);
       marg_results.push_back(keyframe_idx);
       m_keyframe_unused_count.erase(keyframe_idx);
       m_frame_size.erase(keyframe_idx);
@@ -150,7 +149,7 @@ ConstraintManager::marginalize(bool marginalize_planar) noexcept {
   if ((m_params.max_num_keyframes > 0 &&
        m_keyframe_indices.size() > m_params.max_num_keyframes)) {
     const auto frame_index = m_keyframe_indices.front();
-    marginalize_frame(frame_index, true);
+    marginalize_frame(frame_index);
     marg_results.push_back(frame_index);
     m_keyframe_unused_count.erase(frame_index);
     m_frame_size.erase(frame_index);
@@ -160,8 +159,7 @@ ConstraintManager::marginalize(bool marginalize_planar) noexcept {
   return marg_results;
 }
 
-void ConstraintManager::marginalize_frame(const FrameIndex &frame,
-                                          bool marginalize_planar) noexcept {
+void ConstraintManager::marginalize_frame(const FrameIndex &frame) noexcept {
 
   const auto pose_key = X(frame);
   const auto vel_key = V(frame);
@@ -193,17 +191,15 @@ void ConstraintManager::marginalize_frame(const FrameIndex &frame,
   }
 
   // Planar constraint factors
-  if (marginalize_planar) {
-    for (const auto &[j, scan_constraints] : m_constraints) {
-      const auto pose_j_key = X(j);
-      for (const auto &[i, planar_constraints] : scan_constraints) {
-        if (is_empty(planar_constraints))
-          continue;
+  for (const auto &[j, scan_constraints] : m_constraints) {
+    const auto pose_j_key = X(j);
+    for (const auto &[i, planar_constraints] : scan_constraints) {
+      if (is_empty(planar_constraints))
+        continue;
 
-        if (i == frame || j == frame) {
-          dropped_factors.push_back(Factor(X(i), pose_j_key, planar_constraints,
-                                           m_params.planar_constraint_sigma));
-        }
+      if (i == frame || j == frame) {
+        dropped_factors.push_back(Factor(X(i), pose_j_key, planar_constraints,
+                                         m_params.planar_constraint_sigma));
       }
     }
   }
@@ -250,16 +246,6 @@ void ConstraintManager::marginalize_frame(const FrameIndex &frame,
 }
 
 // ------------------------- Setters ------------------------- //
-void ConstraintManager::add_factor(
-    const gtsam::NonlinearFactor::shared_ptr &factor) noexcept {
-  if (m_empty_slots.empty()) {
-    m_other_factors.push_back(factor);
-  } else {
-    m_other_factors.replace(m_empty_slots.back(), factor);
-    m_empty_slots.pop_back();
-  }
-}
-
 void ConstraintManager::update_values(const gtsam::Values &values) noexcept {
   if (m_values.size() == values.size()) {
     m_values = values;
@@ -268,8 +254,8 @@ void ConstraintManager::update_values(const gtsam::Values &values) noexcept {
   }
 }
 
-void ConstraintManager::add_pose(FrameIndex frame, const gtsam::Pose3 &pose,
-                                 std::optional<gtsam::Velocity3> vel) noexcept {
+void ConstraintManager::add_pose(FrameIndex frame,
+                                 const gtsam::Pose3 &pose) noexcept {
   if (frame == 0) {
     // If this is the first frame, initialize the values
     initialize(pose, std::nullopt, frame);
@@ -280,11 +266,6 @@ void ConstraintManager::add_pose(FrameIndex frame, const gtsam::Pose3 &pose,
   m_values.insert(X(frame), pose);
   m_fast_linear = std::nullopt;
   m_frame = frame;
-
-  if (vel) {
-    m_values.insert(V(frame), *vel);
-    m_values.insert(B(frame), m_values.at<ConstantBias>(B(frame - 1)));
-  }
 }
 
 void ConstraintManager::update_pose(const FrameIndex &frame,
@@ -371,38 +352,6 @@ gtsam::NonlinearFactorGraph ConstraintManager::get_graph(bool fast) noexcept {
 const gtsam::Pose3
 ConstraintManager::get_pose(const FrameIndex &frame) const noexcept {
   return m_values.at<gtsam::Pose3>(X(frame));
-}
-
-const gtsam::Velocity3
-ConstraintManager::get_velocity(const FrameIndex &frame) const noexcept {
-  return m_values.at<gtsam::Velocity3>(V(frame));
-}
-
-const gtsam::imuBias::ConstantBias
-ConstraintManager::get_bias(const FrameIndex &frame) const noexcept {
-  return m_values.at<gtsam::imuBias::ConstantBias>(B(frame));
-}
-
-const size_t
-ConstraintManager::num_connections(const FrameIndex &frame) const noexcept {
-  // Count the number of connections to this frame
-  size_t count = 0;
-  for (const auto &[idx_j, constraints] : m_constraints) {
-    if (idx_j == frame) {
-      for (const auto &[_, c] : constraints) {
-        count += std::get<0>(c)->num_constraints();
-        count += std::get<1>(c)->num_constraints();
-      }
-    } else {
-      for (const auto &[idx_i, c] : constraints) {
-        if (idx_i == frame) {
-          count += std::get<1>(c)->num_constraints();
-          count += std::get<0>(c)->num_constraints();
-        }
-      }
-    }
-  }
-  return count;
 }
 
 const size_t

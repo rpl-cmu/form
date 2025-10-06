@@ -95,14 +95,14 @@ public:
   // Returns the current submap of the environment
   const std::map<std::string, std::vector<evalio::Point>> map() override {
     const auto world_map =
-        tuple_transform(estimator_.m_keypoint_map, [&](auto &map) {
+        form::tuple::transform(estimator_.m_keypoint_map, [&](auto &map) {
           return map.to_voxel_map(estimator_.m_constraints.get_values());
         });
 
     std::tuple<std::string, std::string> map_names = {"planar", "point"};
     std::map<std::string, std::vector<evalio::Point>> points;
 
-    for_sequence(std::make_index_sequence<2>{}, [&](auto I) {
+    form::tuple::for_seq(std::make_index_sequence<2>{}, [&](auto I) {
       const auto name = std::get<I>(map_names);
       points.insert({name, {}});
       auto &vec = points[name];

@@ -28,11 +28,15 @@ public:
   using Factor = feature::FeatureFactor;
 
   struct Params {
+    // Maximum number of keyframes to keep
     int64_t max_num_keyframes = 50;
+    // Maximum number of steps a keyframe can go unused before being removed
     int64_t max_steps_unused_keyframe = 10;
+    // Maximum number of recent frames to keep
     size_t max_num_recent_frames = 10;
+    // Keyscan matching ratio
     double keyscan_match_ratio = 0.1;
-
+    // Used for ablations, optimize a single pose at a time
     bool disable_smoothing = false;
 
     // These are all hardcoded as they shouldn't need to ever be changed
@@ -99,26 +103,26 @@ public:
   get_constraints(const FrameIndex &frame_j) noexcept;
 
   // Optimize over the existing constraints, but don't save results
+  // fast => linearize previous matches
   gtsam::Values optimize(bool fast = false) noexcept;
 
-  // Check if there's a keyframe that needs to be marginalized
-  std::vector<FrameIndex> marginalize(bool marginalize_planar = true) noexcept;
+  // Check what frames need to be marginalized, and do so
+  // Returns the list of frames that were marginalized
+  std::vector<FrameIndex> marginalize() noexcept;
 
   // Marginalize out a specific frame
-  void marginalize_frame(const FrameIndex &frame,
-                         bool marginalize_planar = true) noexcept;
+  void marginalize_frame(const FrameIndex &frame) noexcept;
 
   // ------------------------- Setters ------------------------- //
   // Add a new pose to the graph
-  void add_pose(FrameIndex frame, const gtsam::Pose3 &pose,
-                std::optional<gtsam::Velocity3> = std::nullopt) noexcept;
-  // Add a new factor to the graph
-  void add_factor(const gtsam::NonlinearFactor::shared_ptr &factor) noexcept;
+  void add_pose(FrameIndex frame, const gtsam::Pose3 &pose) noexcept;
+
   // Add a keyframe ratio in
   void add_frame_size(FrameIndex frame, size_t size) noexcept {
     m_frame_size.insert_or_assign(frame, size);
   }
-  // Update an existing pose
+
+  // Update an existing pose or values
   void update_pose(const FrameIndex &frame, const gtsam::Pose3 &pose) noexcept;
   void update_values(const gtsam::Values &values) noexcept;
 
@@ -126,9 +130,6 @@ public:
   gtsam::NonlinearFactorGraph get_graph(bool fast) noexcept;
   gtsam::NonlinearFactorGraph get_single_graph() noexcept;
   const gtsam::Pose3 get_pose(const FrameIndex &frame) const noexcept;
-  const gtsam::Velocity3 get_velocity(const FrameIndex &frame) const noexcept;
-  const gtsam::imuBias::ConstantBias
-  get_bias(const FrameIndex &frame) const noexcept;
   const gtsam::Values &get_values() const noexcept { return m_values; }
   const size_t get_num_keyframes() const noexcept {
     return m_keyframe_indices.size();
@@ -136,19 +137,7 @@ public:
   const size_t get_num_recent_frames() const noexcept {
     return m_recent_frame_indices.size();
   }
-  const size_t get_num_constraints() const noexcept {
-    size_t count = 0;
-    for (const auto &[_, constraints] : m_constraints) {
-      for (const auto &[_, c] : constraints) {
-        count += std::get<0>(c)->num_constraints();
-        count += std::get<1>(c)->num_constraints();
-      }
-    }
-    return count;
-  }
-
   const bool initialized() const noexcept { return !m_values.empty(); }
-  const size_t num_connections(const FrameIndex &frame) const noexcept;
   const size_t num_recent_connections(const FrameIndex &frame) const noexcept;
 };
 

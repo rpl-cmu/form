@@ -55,24 +55,22 @@ Estimator::registerScan(const std::vector<Eigen::Vector3f> &scan) noexcept {
 
   // ------------------------- Matching ------------------------- //
   // Create world map
-  const auto world_map = tuple_transform(m_keypoint_map, [&](auto &map) {
+  const auto world_map = tuple::transform(m_keypoint_map, [&](auto &map) {
     return map.to_voxel_map(m_constraints.get_values());
   });
 
   // Extract keypoints
   const auto keypoints = m_extractor(scan, m_frame);
 
-  // Make a spot in constraints & keypoint map
-  // This might be too expensive, essentially putting too many on at a time.
-  auto &scan_constraints = m_constraints.get_constraints(m_frame);
-
   auto max_dist_sqrd = m_params.max_dist_max * m_params.max_dist_max;
   auto max_dist_map_sqrd = m_params.max_dist_map * m_params.max_dist_map;
 
+  // Prep storages for matches & constraints
   gtsam::Values new_values;
+  auto &scan_constraints = m_constraints.get_constraints(m_frame);
   auto matches = std::make_tuple(tbb::concurrent_vector<Match<PlanarFeat>>(),
                                  tbb::concurrent_vector<Match<PointFeat>>());
-  for_sequence(seq, [&](auto I) {
+  tuple::for_seq(seq, [&](auto I) {
     std::get<I>(matches).reserve(std::get<I>(keypoints).size());
   });
 
@@ -80,15 +78,14 @@ Estimator::registerScan(const std::vector<Eigen::Vector3f> &scan) noexcept {
   for (size_t idx_rematch = 0; idx_rematch < m_params.max_num_rematches;
        ++idx_rematch) {
 
-    // ------------------------- Matching part ------------------------- //
+    // Matching
     auto init = m_constraints.get_pose(m_frame);
-
-    for_sequence(seq, [&](auto I) {
-      // Loop through all of the new keypoints and perform matching
+    tuple::for_seq(seq, [&](auto I) {
+      // Clear previous constraints & matches
+      std::get<I>(matches).clear();
       for (auto it = scan_constraints.begin(); it != scan_constraints.end(); ++it) {
         std::get<I>(it.value())->clear();
       }
-      std::get<I>(matches).clear();
 
       // Find all matches
       const auto range = tbb::blocked_range{std::get<I>(keypoints).cbegin(),
@@ -135,7 +132,7 @@ Estimator::registerScan(const std::vector<Eigen::Vector3f> &scan) noexcept {
 
   // ------------------------- Post ICP ------------------------- //
   // Move some keypoints into map
-  for_sequence(seq, [&](auto I) {
+  tuple::for_seq(seq, [&](auto I) {
     auto &new_kp_map = std::get<I>(m_keypoint_map).get(m_frame);
     for (const auto &match : std::get<I>(matches)) {
       if (match.dist_sqrd > max_dist_map_sqrd) {
@@ -154,8 +151,8 @@ Estimator::registerScan(const std::vector<Eigen::Vector3f> &scan) noexcept {
                                             std::get<1>(keypoints).size());
 
   // ------------------------- Marginalization ------------------------- //
-  auto marg_frame = m_constraints.marginalize(true);
-  for_each(m_keypoint_map, [&](auto &map) { map.remove(marg_frame); });
+  auto marg_frame = m_constraints.marginalize();
+  tuple::for_each(m_keypoint_map, [&](auto &map) { map.remove(marg_frame); });
 
   ++m_frame;
 

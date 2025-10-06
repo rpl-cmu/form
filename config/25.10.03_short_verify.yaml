@@ -1,6 +1,6 @@
 pipelines:
   - pipeline: form
-    name: rename_types
+    name: clean_constraints
 
 datasets:
   # ncd20

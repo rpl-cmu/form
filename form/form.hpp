@@ -18,27 +18,6 @@
 #include <Eigen/Core>
 #include <vector>
 
-// https://www.cppstories.com/2022/tuple-iteration-apply/
-template <typename TupleT, typename Fn>
-[[nodiscard]] auto tuple_transform(TupleT &&tp, Fn &&fn) {
-  return std::apply(
-      [&fn](auto &&...args) {
-        return std::make_tuple(fn(std::forward<decltype(args)>(args))...);
-      },
-      std::forward<TupleT>(tp));
-}
-
-template <typename TupleT, typename Fn> void for_each(TupleT &&tp, Fn &&fn) {
-  std::apply(
-      [&fn](auto &&...args) { (fn(std::forward<decltype(args)>(args)), ...); },
-      std::forward<TupleT>(tp));
-}
-
-template <typename T, T... S, typename F>
-constexpr void for_sequence(std::integer_sequence<T, S...>, F &&f) {
-  (void(f(std::integral_constant<T, S>{})), ...);
-}
-
 namespace form {
 
 template <typename Point> struct Match {
@@ -53,10 +32,13 @@ template <typename Point> struct Match {
 class Estimator {
 public:
   struct Params {
-    ConstraintManager::Params constraints;
-
-    // kp extraction params
+    // Keypoint extraction params
     feature::FeatureExtractor::Params keypointExtraction;
+
+    // Optimization params
+
+    // Mapping params
+    ConstraintManager::Params constraints;
 
     // points must be within this percent of range to be matched
     double max_dist_min = 0.1;
@@ -98,5 +80,30 @@ public:
   std::tuple<std::vector<PlanarFeat>, std::vector<PointFeat>>
   registerScan(const std::vector<Eigen::Vector3f> &scan) noexcept;
 };
+
+namespace tuple {
+// Some helpers ot make iterating over tuples easier
+// https://www.cppstories.com/2022/tuple-iteration-apply/
+template <typename TupleT, typename Fn>
+[[nodiscard]] auto transform(TupleT &&tp, Fn &&fn) {
+  return std::apply(
+      [&fn](auto &&...args) {
+        return std::make_tuple(fn(std::forward<decltype(args)>(args))...);
+      },
+      std::forward<TupleT>(tp));
+}
+
+template <typename TupleT, typename Fn> void for_each(TupleT &&tp, Fn &&fn) {
+  std::apply(
+      [&fn](auto &&...args) { (fn(std::forward<decltype(args)>(args)), ...); },
+      std::forward<TupleT>(tp));
+}
+
+template <typename T, T... S, typename F>
+constexpr void for_seq(std::integer_sequence<T, S...>, F &&f) {
+  (void(f(std::integral_constant<T, S>{})), ...);
+}
+
+} // namespace tuple
 
 } // namespace form
