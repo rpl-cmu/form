@@ -20,8 +20,6 @@ pipesss = [
 headers = [["Planar", r"Point \& Planar"], ["Filtered", "Smoothed"]]
 experiments = ["feature", "smoothing"]
 
-metric = "RTEt"
-
 captions = [
     r"Ablation study comparing features used in \ac{ours}. Values are averaged across dataset sequences, with results in bold representing the best results. While the point and planar variant of \ac{ours} does not significantly improve smoothness, it does help with odometry drift at a performance cost.",
     r"Ablation study showing the effects of smoothing in \ac{ours}. Values are averaged across dataset sequences, with results in bold representing the best results. Smoothing improves the drift performance of \ac{ours} but has limited impact on the smoothness of the trajectory.",
@@ -61,14 +59,18 @@ for file, caption, pipes, header, exp in zip(
             \toprule
             D. & \multicolumn{{3}}{{c}}{{{header[0]}}} & \multicolumn{{3}}{{c}}{{{header[1]}}} \\
             \midrule
-            & \rte{{{WINDOW_SMALL:.0f}}} & \rte{{{WINDOW_LARGE:.0f}}} & Hz & \rte{{{WINDOW_SMALL:.0f}}} & \rte{{{WINDOW_LARGE:.0f}}} & Hz \\
+            & \rte{{{WINDOW_SMALL.value:.0f}}} & \rte{{{WINDOW_LARGE.value:.0f}}} & Hz & \rte{{{WINDOW_SMALL.value:.0f}}} & \rte{{{WINDOW_LARGE.value:.0f}}} & Hz \\
             \midrule
         """)
 
         for d in DATASETS:
-            vals_small = compute_avg(df_small, d, pipes=pipes)
-            vals_big = compute_avg(df_big, d, pipes=pipes)
-            hz = compute_avg(df_small, d, "Hz", pipes=pipes)
+            vals_small = compute_avg(
+                df_small, d, values=f"RTEt_{WINDOW_SMALL.name()}", pipes=pipes
+            )
+            vals_big = compute_avg(
+                df_big, d, values=f"RTEt_{WINDOW_LARGE.name()}", pipes=pipes
+            )
+            hz = compute_avg(df_small, d, "hz", pipes=pipes)
 
             # convert to strings, bolding the smaller one
             vals_small = mark_mins(*vals_small)

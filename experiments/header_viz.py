@@ -1,8 +1,6 @@
 from pathlib import Path
 from typing import cast
-from evalio import datasets
-from evalio.cli.parser import PipelineBuilder
-from evalio.types import LidarMeasurement
+from evalio import datasets as ds, types as ty, pipelines as pl
 from tqdm import tqdm
 import pyvista as pv
 import seaborn as sns
@@ -15,7 +13,7 @@ from itertools import chain
 from env import GRAPHICS_DIR
 
 # ------------------------- Config! ------------------------- #
-dataset = datasets.OxfordSpires.observatory_quarter_01
+dataset = ds.OxfordSpires.observatory_quarter_01
 
 start = 450
 end = 572
@@ -61,7 +59,13 @@ def set_camera_position(
 
 # ------------------------- Loop through to get map ------------------------- #
 cache = Path(".cache") / dataset.full_name / f"{start}_{end}.pkl"
-pipe = PipelineBuilder.parse("form")[0].build(dataset)
+pipe = pl.get_pipeline("form")
+if isinstance(pipe, Exception):
+    raise pipe
+out = ty.Experiment.from_pl_ds(pipe, dataset).setup()
+if isinstance(out, Exception):
+    raise out
+pipe, dataset = out
 
 global_map = {}
 features = None
@@ -76,7 +80,7 @@ else:
     curr_idx = 0
     loop = tqdm(total=end)
     for data in dataset.lidar():
-        if isinstance(data, LidarMeasurement):
+        if isinstance(data, ty.LidarMeasurement):
             # visualize in rerun
             if curr_idx > start:
                 # feed through pipeline

@@ -24,8 +24,6 @@ names_to_include = [
 ]
 pretty_names = [pretty_pipe_names(n) for n in names_to_include]
 
-metric = "RTEt"
-
 
 def format(value: str, status: str) -> str:
     """Format the value based on its status.
@@ -72,7 +70,7 @@ def mark_min(values: tuple, status: tuple, outputs: list[str]):
 c = setup_plot()
 
 windows = [WINDOW_SMALL, WINDOW_LARGE]
-caption = rf"Both \rte{{{WINDOW_SMALL:.0f}}} and \rte{{{WINDOW_LARGE:.0f}}} for all datasets. Strike-throughs indicate a failure to complete, italics sub-real-time performance, \textcolor{{color0}}{{\textbf{{bold blue}}}} the best real-time result, and \textcolor{{color0!80}}{{light blue}} the second best. \ac{{ours}} has competitive drift performance while still maintaining a smooth trajectory and real-time speed."
+caption = rf"Both \rte{{{WINDOW_SMALL.value:.0f}}} and \rte{{{WINDOW_LARGE.value:.0f}}} for all datasets. Strike-throughs indicate a failure to complete, italics sub-real-time performance, \textcolor{{color0}}{{\textbf{{bold blue}}}} the best real-time result, and \textcolor{{color0!80}}{{light blue}} the second best. \ac{{ours}} has competitive drift performance while still maintaining a smooth trajectory and real-time speed."
 
 
 file = GRAPHICS_DIR / "table_baselines.tex"
@@ -92,7 +90,7 @@ with open(file, "w") as f:
             \centering
             \begin{{tabular}}{{l|c||{"c" * len(PIPES)}}}
             \toprule
-			\multicolumn{{{2 + len(PIPES)}}}{{c}}{{\rte{{{window:.0f}}}}} \\
+			\multicolumn{{{2 + len(PIPES)}}}{{c}}{{\rte{{{window.value:.0f}}}}} \\
 			\toprule
         """)
         df = compute_and_cache(window)
@@ -103,7 +101,7 @@ with open(file, "w") as f:
         for d in DATASETS:
             # print(d)
             this = df.filter(pl.col("dataset").eq(d))
-            pivot = this.pivot(on="name", index="seq", values=metric)
+            pivot = this.pivot(on="name", index="seq", values=f"RTEt_{window.name()}")
             pivot_status = this.pivot(on="name", index="seq", values="status")
             num_seq = len(pivot)
 

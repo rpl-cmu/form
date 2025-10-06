@@ -35,10 +35,10 @@ with open(file, "w") as f:
     """)
     f.write("D. & " + " & ".join(pretty_names) + " \\\\ \n\\midrule\n")
 
-    df = df.filter(pl.col("RTEt") < 10.0)
+    df = df.filter(pl.col(f"RTEt_{WINDOW_LARGE.name()}") < 10.0)
 
     for d in DATASETS:
-        avg = compute_avg(df, d, "Hz")
+        avg = compute_avg(df, d, "hz")
         f.write(
             f"{SHORT_DATASET_NAMES[d]} & "
             + " & ".join(f"{v:.1f}" for v in avg)

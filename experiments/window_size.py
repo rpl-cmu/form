@@ -1,13 +1,12 @@
 from evalio.cli.stats import evaluate
 from evalio.types import Trajectory, SE3, SO3
-from evalio.stats import align
+from evalio.stats import align, WindowMeters
 import numpy as np
 import matplotlib.pyplot as plt
 
 from env import (
     COL_WIDTH,
     pretty_pipe_names,
-    WINDOW_KIND,
     WINDOW_SMALL,
     FINAL_DIR,
     plt_show,
@@ -38,12 +37,10 @@ fig, ax = plt.subplots(
 
 # ------------------------- First plot the window size computations ------------------------- #
 # gather the results
-windows = np.arange(WINDOW_SMALL, 18.0, 2.0)
+windows = np.arange(WINDOW_SMALL.value, 18.0, 2.0)
 final_results = {name: [] for name in names}
 for w in windows:
-    results = evaluate(
-        [str(data)], quiet=True, window_size=float(w), window_kind=WINDOW_KIND
-    )
+    results = evaluate([data], windows=[WindowMeters(float(w))])
     print(f"Evaluating window size {w} with {len(results)} results")
     for r in results:
         if r["name"] in final_results:
@@ -66,20 +63,24 @@ ax[0].set_ylabel(r"RTEt$_j$ (cm)", labelpad=1.0)
 rough_indices = slice(1185, 1242)
 
 # load all the data
-trajectories = [Trajectory.from_experiment(data / f"{name}.csv") for name in names]
-gt = Trajectory.from_experiment(data / "gt.csv")
-if gt is None:
+trajectories = [Trajectory.from_file(data / f"{name}.csv") for name in names]
+gt = Trajectory.from_file(data / "gt.csv")
+if isinstance(gt, Exception):
     print("Missing ground truth trajectory, quitting.")
     exit()
 
 trajectories = {}
 for n in names:
-    t = Trajectory.from_experiment(data / f"{n}.csv")
-    if t is None:
+    t = Trajectory.from_file(data / f"{n}.csv")
+    if isinstance(t, Exception):
         print(f"Missing trajectory for {n}, quitting.")
         exit()
 
-    t, gt_align = align(t, gt)
+    out = align(t, gt)
+    if isinstance(out, Exception):
+        print(f"Failed to align {n} to ground truth, quitting.")
+        exit()
+    gt_align, t = out
 
     offset = ROT * t.poses[rough_indices.start].inverse()
     xyz = np.asarray([(offset * pose).trans for pose in t.poses[rough_indices]])

@@ -2,10 +2,7 @@ pipelines:
   - pipeline: mad
     num_keyframes: 4
     realtime: true
-
-  - pipeline: ct_2022
-    name: ct
-
+  - ct
   - kiss
   - genz
 

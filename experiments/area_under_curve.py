@@ -25,9 +25,10 @@ for i, window in enumerate([WINDOW_SMALL, WINDOW_LARGE]):
     df = df.filter(pl.col("status").is_in(["success", "slow"]))
 
     # get all values to compute steps at
-    steps = df.select(pl.col("RTEt")).to_series().sort().to_list()
+    rte = f"RTEt_{window.name()}"
+    steps = df.select(pl.col(rte)).to_series().sort().to_list()
 
-    pivot = df.pivot(on="name", index="sequence", values="RTEt").drop("sequence")
+    pivot = df.pivot(on="name", index="sequence", values=rte).drop("sequence")
     num_trajectories = pivot.height
 
     # collect all the values
@@ -49,7 +50,7 @@ for i, window in enumerate([WINDOW_SMALL, WINDOW_LARGE]):
 
     ax[i].legend().remove()
     ax[i].set_xlim(0, limits[i])
-    ax[i].set_xlabel(rf"RTE$_{{{int(window)}}}$ Threshold (m)")
+    ax[i].set_xlabel(rf"RTE$_{{{int(window.value)}}}$ Threshold (m)")
     ax[i].set_ylabel("% Sequences Above Threshold")
     # ax[i].legend(
     #     loc="lower right",

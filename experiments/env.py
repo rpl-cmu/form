@@ -1,5 +1,4 @@
 from pathlib import Path
-from evalio.stats import WindowKind
 
 import matplotlib.pyplot as plt
 import matplotlib
@@ -11,18 +10,20 @@ import subprocess
 
 import polars as pl
 from evalio.cli.stats import evaluate
+from evalio import stats
 
 from typing import Optional
 
 
-WINDOW_KIND = WindowKind.distance
-WINDOW_SMALL = 1.0
-WINDOW_LARGE = 30.0
+WINDOW_SMALL = stats.WindowMeters(1.0)
+WINDOW_LARGE = stats.WindowMeters(30.0)
 
-FINAL_DIR = Path("evalio_results/25.08.26_final")
+FINAL_DIR = Path("evalio_results/25.10.03_full")
 
 FIGURE_DIR = Path("figures")
+FIGURE_DIR.mkdir(exist_ok=True, parents=True)
 GRAPHICS_DIR = Path("graphics")
+GRAPHICS_DIR.mkdir(exist_ok=True, parents=True)
 
 TEXT_WIDTH = 516.0 / 72.27
 COL_WIDTH = 252.0 / 72.27
@@ -127,6 +128,9 @@ def short(f: str) -> str:
 
 
 def sequence_pretty_names(seq) -> str:
+    if "/" in seq:
+        seq = seq.split("/")[-1]
+
     # for cumulti
     if "_robot" in seq:
         seq = seq[:-1] + "_" + seq[-1]
@@ -151,32 +155,25 @@ lidar_rates = {k: v - 0.5 for k, v in lidar_rates.items()}
 
 
 def compute_and_cache(
-    window_size: float, pipes: Optional[list[str]] = None
+    window: stats.WindowKind, pipes: Optional[list[str]] = None
 ) -> pl.DataFrame:
     if pipes is None:
         pipes = PIPES
 
-    file = FINAL_DIR / f"results_{window_size:.1f}_{WINDOW_KIND.value}.csv"
+    file = FINAL_DIR / f"results_{window.__class__.__name__}_{window.value}.csv"
     if file.exists():
         print(f"loading cached results from {file}")
         df = pl.read_csv(file)
 
     else:
-        results = evaluate(
-            [str(FINAL_DIR)],
-            quiet=True,
-            window_kind=WINDOW_KIND,
-            window_size=window_size,
-        )
+        results = evaluate([FINAL_DIR], windows=[window])
         # Replace all mentions of "--" in results with None
-        for row in results:
-            for key, value in row.items():
-                if value == "--":
-                    row[key] = None
-
         df = pl.DataFrame(results)
         print(f"Saving results to {file}")
         df.write_csv(file)
+
+    # make dataset name a thing
+    df = df.with_columns(pl.col("sequence").str.split("/").list.get(0).alias("dataset"))
 
     # clean up a few things
     df = df.filter(pl.col("name").is_in(pipes) & pl.col("dataset").is_in(DATASETS))
@@ -188,11 +185,13 @@ def compute_and_cache(
                 lambda seq: sequence_pretty_names(seq), return_dtype=pl.String
             )
             .alias("seq"),
-            status=pl.when((pl.col.status != "complete") | pl.col.RTEt.is_nan())
+            status=pl.when(
+                (pl.col.status != "complete") | pl.col(f"RTEt_{window.name()}").is_nan()
+            )
             .then(pl.lit("fail"))
             .otherwise(
                 pl.when(
-                    pl.col.Hz
+                    pl.col.hz
                     < pl.col.dataset.replace(lidar_rates, return_dtype=pl.Float64)
                 )
                 .then(pl.lit("slow"))
@@ -212,7 +211,7 @@ def compute_and_cache(
 
 
 def compute_avg(
-    df: pl.DataFrame, d: str, values: str = "RTEt", pipes: Optional[list[str]] = None
+    df: pl.DataFrame, d: str, values: str, pipes: Optional[list[str]] = None
 ) -> tuple:
     if pipes is None:
         pipes = PIPES
