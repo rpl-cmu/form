@@ -53,7 +53,6 @@ public:
     gtsam::noiseModel::Base::shared_ptr pose_noise;
     gtsam::noiseModel::Base::shared_ptr vel_noise;
     gtsam::noiseModel::Base::shared_ptr bias_noise;
-
     gtsam::LevenbergMarquardtParams opt_params;
 
     Params() {

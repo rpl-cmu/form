@@ -4,6 +4,7 @@
 #include "form/feature/type.hpp"
 #include "form/mapping/map.hpp"
 #include "form/optimization/constraints.hpp"
+#include "form/optimization/matcher.hpp"
 
 #include <gtsam/geometry/Pose3.h>
 #include <gtsam/inference/Symbol.h>
@@ -20,45 +21,40 @@
 
 namespace form {
 
-template <typename Point> struct Match {
-  Point query;
-  Point point;
-  double dist_sqrd;
-
-  Match(const Point &q, const Point &p, double d_sqrd)
-      : query(q), point(p), dist_sqrd(d_sqrd) {}
-};
-
 class Estimator {
 public:
   struct Params {
+
+    // TODO: Break up params into components?
     // Keypoint extraction params
     feature::FeatureExtractor::Params keypointExtraction;
 
     // Optimization params
+    // TODO: Switch this to ICP params - doesn't have to be connected to the class
+    // TODO: max_dist_map should be moved to a mapping params struct
+    MatcherParams matcher;
 
-    // Mapping params
+    // TODO: Move keyscan selection into it's own struct, will use most of these
+    // params
     ConstraintManager::Params constraints;
 
     // points must be within this percent of range to be matched
-    double max_dist_max = 1.0;
-    double max_dist_map = 0.1;
     double new_pose_threshold = 1e-4;
     size_t max_num_rematches = 10;
-
-    bool linearize_when_matching = true;
-    bool linearize_for_final = false;
 
     size_t num_threads = 0;
   };
 
   Params m_params;
 
-  // constraint & graph manager
-  ConstraintManager m_constraints;
-
   // Extractor
   feature::FeatureExtractor m_extractor;
+
+  // matcher
+  std::tuple<Matcher<PlanarFeat>, Matcher<PointFeat>> m_matcher;
+
+  // constraint & graph manager
+  ConstraintManager m_constraints;
 
   // keypoint map
   std::tuple<KeypointMap<PlanarFeat>, KeypointMap<PointFeat>> m_keypoint_map;

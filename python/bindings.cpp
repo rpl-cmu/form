@@ -64,10 +64,11 @@ public:
 
   static std::map<std::string, evalio::Param> default_params() {
     return {
-        {"max_dist_max", 0.8},
-        {"max_dist_map", 0.1},
         {"new_pose_threshold", 1e-4},
         {"max_num_rematches", 30},
+        // matcher params
+        {"max_dist_matching", 0.8},
+        {"max_dist_map", 0.1},
         // constraint params
         {"max_num_keyframes", 50},
         {"max_num_recent_frames", 10},
@@ -141,18 +142,21 @@ public:
   set_params(std::map<std::string, evalio::Param> params) override {
     for (const auto &[key, value] : params) {
       // handle form parameters
-      if (key == "max_dist_max") {
-        params_.max_dist_max = std::get<double>(value);
-      } else if (key == "new_pose_threshold") {
+      if (key == "new_pose_threshold") {
         params_.new_pose_threshold = std::get<double>(value);
       } else if (key == "max_num_rematches") {
         params_.max_num_rematches = std::get<int>(value);
-      } else if (key == "max_dist_map") {
-        params_.max_dist_map = std::get<double>(value);
       } else if (key == "num_threads") {
         params_.num_threads = std::get<int>(value);
       } else if (key == "disable_smoothing") {
         params_.constraints.disable_smoothing = std::get<bool>(value);
+      }
+
+      // handle matcher parameters
+      else if (key == "max_dist_matching") {
+        params_.matcher.max_dist_matching = std::get<double>(value);
+      } else if (key == "max_dist_map") {
+        params_.matcher.max_dist_map = std::get<double>(value);
       }
 
       // handle constraint parameters
