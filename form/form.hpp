@@ -59,9 +59,9 @@ public:
   FrameIndex m_frame;
 
 public:
-  Estimator(const Params &params) noexcept;
+  Estimator() : Estimator(Params()) {}
 
-  void reset(const Params &params) noexcept;
+  Estimator(const Params &params) noexcept;
 
   gtsam::Pose3 current_lidar_estimate() {
     return m_constraints.get_pose(m_frame - 1);

@@ -24,22 +24,6 @@ Estimator::Estimator(const Estimator::Params &params) noexcept
       tbb::global_control::max_allowed_parallelism, max_num_threads);
 }
 
-void Estimator::reset(const Estimator::Params &params) noexcept {
-  m_params = params;
-
-  m_extractor = FeatureExtractor(params.extraction);
-
-  m_constraints = ConstraintManager(params.constraints);
-  m_matcher = {Matcher<PlanarFeat>(params.matcher),
-               Matcher<PointFeat>(params.matcher)};
-
-  m_scan_handler = ScanHandler(params.scans);
-  m_keypoint_map = {KeypointMap<PlanarFeat>(m_params.map),
-                    KeypointMap<PointFeat>(m_params.map)};
-
-  m_frame = 0;
-}
-
 std::tuple<std::vector<PlanarFeat>, std::vector<PointFeat>>
 Estimator::registerScan(const std::vector<Eigen::Vector3f> &scan) noexcept {
   constexpr auto SEQ = std::make_index_sequence<2>{};

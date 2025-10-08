@@ -47,11 +47,9 @@ Eigen::Vector3f point_to_form(const evalio::Point &point) {
 // ------------------------- Pipeline ------------------------- //
 class FORM : public evalio::Pipeline {
 public:
-  FORM()
-      : evalio::Pipeline(), params_(),
-        estimator_(std::make_unique<form::Estimator>(params_)) {}
+  FORM() : evalio::Pipeline(), params_(), estimator_() {}
 
-  std::unique_ptr<form::Estimator> estimator_;
+  form::Estimator estimator_;
   form::Estimator::Params params_;
 
   // helper params
@@ -97,9 +95,9 @@ public:
   // Returns the current submap of the environment
   const std::map<std::string, std::vector<evalio::Point>> map() override {
     const auto world_map =
-        form::tuple::transform(estimator_->m_keypoint_map, [&](auto &map) {
-          return map.to_voxel_map(estimator_->m_constraints.get_values(),
-                                  estimator_->m_params.map.max_dist_map);
+        form::tuple::transform(estimator_.m_keypoint_map, [&](auto &map) {
+          return map.to_voxel_map(estimator_.m_constraints.get_values(),
+                                  estimator_.m_params.map.max_dist_map);
         });
 
     std::tuple<std::string, std::string> map_names = {"planar", "point"};
@@ -140,9 +138,7 @@ public:
 
   // ------------------------- Doers ------------------------- //
   // Initialize the pipeline
-  void initialize() override {
-    estimator_ = std::make_unique<form::Estimator>(params_);
-  }
+  void initialize() override { estimator_ = form::Estimator(params_); }
 
   // Add an IMU measurement
   void add_imu(evalio::ImuMeasurement mm) override {}
@@ -160,9 +156,9 @@ public:
     }
 
     // run the estimator
-    auto [planar_kp, point_kp] = estimator_->registerScan(scan);
+    auto [planar_kp, point_kp] = estimator_.registerScan(scan);
     current_pose =
-        pose_to_evalio(estimator_->current_lidar_estimate() * lidar_T_imu_);
+        pose_to_evalio(estimator_.current_lidar_estimate() * lidar_T_imu_);
 
     // extract the keypoints
     std::map<std::string, std::vector<evalio::Point>> points = {{"planar", {}},
