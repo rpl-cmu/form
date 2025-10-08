@@ -26,23 +26,18 @@ class Estimator {
 public:
   struct Params {
 
-    // TODO: Break up params into components?
     // Extraction params
     feature::FeatureExtractor::Params keypointExtraction;
 
     // Optimization params
-    // TODO: Switch this to ICP params - doesn't have to be connected to the class
-    // TODO: max_dist_map should be moved to a mapping params struct
     MatcherParams matcher;
     ConstraintManager::Params constraints;
 
     // Mapping params
     ScanHandler::Params scans;
+    KeypointMapParams map;
 
     // points must be within this percent of range to be matched
-    double new_pose_threshold = 1e-4;
-    size_t max_num_rematches = 10;
-
     size_t num_threads = 0;
   };
 

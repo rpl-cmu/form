@@ -5,18 +5,10 @@
 
 namespace form {
 
-template <typename Point> struct Match {
-  Point query;
-  Point point;
-  double dist_sqrd;
-
-  Match(const Point &q, const Point &p, double d_sqrd)
-      : query(q), point(p), dist_sqrd(d_sqrd) {}
-};
-
 struct MatcherParams {
   double max_dist_matching = 0.8;
-  double max_dist_map = 0.1;
+  double new_pose_threshold = 1e-4;
+  size_t max_num_rematches = 10;
 };
 
 template <typename Point> class Matcher {
@@ -48,12 +40,14 @@ public:
       for (auto kp = range.begin(); kp != range.end(); ++kp) {
         auto match = map.find_closest(kp->transform(init));
 
+        // move back into local frames
+        match.query = *kp;
         if (match.found()) {
           auto &scan_pose = manager.get_pose(match.point.scan);
           match.point.transform_in_place(scan_pose.inverse());
         }
 
-        matches.emplace_back(*kp, match.point, match.distanceSquared);
+        matches.push_back(match);
       }
     });
 
@@ -70,13 +64,6 @@ public:
     }
   };
 
-  void insert_map(std::vector<Point> &map) {
-    double max_dist_map_sqrd = m_params.max_dist_map * m_params.max_dist_map;
-    for (const auto &match : matches) {
-      if (match.dist_sqrd > max_dist_map_sqrd) {
-        map.push_back(match.query);
-      }
-    }
-  }
+  const tbb::concurrent_vector<Match<Point>> &get_matches() const { return matches; }
 };
 } // namespace form

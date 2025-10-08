@@ -35,14 +35,10 @@ public:
     // Just scaling to make sure priors & feature factors are balanced
     double planar_constraint_sigma = 0.1;
     gtsam::noiseModel::Base::shared_ptr pose_noise;
-    gtsam::noiseModel::Base::shared_ptr vel_noise;
-    gtsam::noiseModel::Base::shared_ptr bias_noise;
     gtsam::LevenbergMarquardtParams opt_params;
 
     Params() {
       pose_noise = gtsam::noiseModel::Isotropic::Sigma(6, 1e-3);
-      vel_noise = gtsam::noiseModel::Isotropic::Sigma(3, 1e-3);
-      bias_noise = gtsam::noiseModel::Isotropic::Sigma(6, 1e-2);
       opt_params = gtsam::LevenbergMarquardtParams();
       // We're super dense anyways, don't worry about the ordering
       opt_params.orderingType = gtsam::Ordering::NATURAL;
@@ -75,7 +71,7 @@ private:
   PairwiseConstraintsIndex m_constraints;
 
 public:
-  ConstraintManager() : m_params() {};
+  ConstraintManager() : m_params() {}
   ConstraintManager(const Params &params) : m_params(params) {}
 
   // ------------------------- Doers ------------------------- //

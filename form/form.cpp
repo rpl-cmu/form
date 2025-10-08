@@ -11,8 +11,8 @@ Estimator::Estimator(const Estimator::Params &params) noexcept
     : m_params(params), m_frame(0), m_constraints(params.constraints),
       m_matcher{Matcher<PlanarFeat>(params.matcher),
                 Matcher<PointFeat>(params.matcher)},
-      m_keypoint_map{KeypointMap<PlanarFeat>(m_params.matcher.max_dist_matching),
-                     KeypointMap<PointFeat>(m_params.matcher.max_dist_matching)},
+      m_keypoint_map{KeypointMap<PlanarFeat>(m_params.map),
+                     KeypointMap<PointFeat>(m_params.map)},
       m_scan_handler(params.scans), m_extractor(params.keypointExtraction) {
   // This global variable requires static duration storage to be able to manipulate
   // the max concurrency from TBB across the entire class
@@ -34,8 +34,8 @@ void Estimator::reset(const Estimator::Params &params) noexcept {
                Matcher<PointFeat>(params.matcher)};
 
   m_scan_handler = ScanHandler(params.scans);
-  m_keypoint_map = {KeypointMap<PlanarFeat>(m_params.matcher.max_dist_matching),
-                    KeypointMap<PointFeat>(m_params.matcher.max_dist_matching)};
+  m_keypoint_map = {KeypointMap<PlanarFeat>(m_params.map),
+                    KeypointMap<PointFeat>(m_params.map)};
 
   m_frame = 0;
 }
@@ -71,7 +71,8 @@ Estimator::registerScan(const std::vector<Eigen::Vector3f> &scan) noexcept {
 
   // Create the world map
   const auto world_map = tuple::transform(m_keypoint_map, [&](auto &map) {
-    return map.to_voxel_map(m_constraints.get_values());
+    return map.to_voxel_map(m_constraints.get_values(),
+                            m_params.matcher.max_dist_matching);
   });
 
   // Prep storages for matches & constraints
@@ -79,28 +80,25 @@ Estimator::registerScan(const std::vector<Eigen::Vector3f> &scan) noexcept {
   auto &scan_constraints = m_constraints.get_constraints(m_frame);
   m_scan_handler.fill_constraints(scan_constraints);
 
-  for (size_t idx_rematch = 0; idx_rematch < m_params.max_num_rematches;
-       ++idx_rematch) {
+  for (size_t idx = 0; idx < m_params.matcher.max_num_rematches; ++idx) {
+    auto before = m_constraints.get_pose(m_frame);
 
     // -------------------------------- Matching -------------------------------- //
-    auto init = m_constraints.get_pose(m_frame);
     tuple::for_seq(SEQ, [&](auto I) {
       std::get<I>(m_matcher).template match<I>(std::get<I>(world_map),
-                                               std::get<I>(keypoints), init,
+                                               std::get<I>(keypoints), before,
                                                m_constraints, scan_constraints);
     });
 
     // ---------------------- Semi-Linearized Optimization ---------------------- //
     new_values = m_constraints.optimize(true);
 
-    const auto next_frame_pose_before = m_constraints.get_pose(m_frame);
-    const auto next_frame_pose_after = new_values.at<Pose3>(X(m_frame));
-    const auto diff =
-        next_frame_pose_before.localCoordinates(next_frame_pose_after).norm();
-    if (diff < m_params.new_pose_threshold) {
+    const auto after = new_values.at<Pose3>(X(m_frame));
+    const auto diff = before.localCoordinates(after).norm();
+    if (diff < m_params.matcher.new_pose_threshold) {
       break;
     }
-    m_constraints.update_pose(m_frame, next_frame_pose_after);
+    m_constraints.update_pose(m_frame, after);
   }
 
   // ------------------------ Full Nonlinear Optimization ------------------------ //
@@ -112,16 +110,15 @@ Estimator::registerScan(const std::vector<Eigen::Vector3f> &scan) noexcept {
   //
   // ------------------------------ Map insertions ------------------------------ //
   tuple::for_seq(SEQ, [&](auto I) {
-    auto &new_kp_map = std::get<I>(m_keypoint_map).get(m_frame);
-    std::get<I>(m_matcher).insert_map(new_kp_map);
+    std::get<I>(m_keypoint_map).insert_matches(std::get<I>(m_matcher).get_matches());
   });
 
   // ------------------------- Keyscan Selection ------------------------- //
-  auto marg_frames =
-      m_scan_handler.update(m_frame, num_keypoints, [&](FrameIndex frame) {
-        return m_constraints.num_recent_connections(frame,
-                                                    m_scan_handler.oldest_rf().idx);
-      });
+  const auto connections = [&](FrameIndex frame) {
+    return m_constraints.num_recent_connections(frame,
+                                                m_scan_handler.oldest_rf().idx);
+  };
+  auto marg_frames = m_scan_handler.update(m_frame, num_keypoints, connections);
 
   // -------------------- Marginalization -------------------- //
   for (const auto &frame : marg_frames) {

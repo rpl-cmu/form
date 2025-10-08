@@ -96,7 +96,8 @@ public:
   const std::map<std::string, std::vector<evalio::Point>> map() override {
     const auto world_map =
         form::tuple::transform(estimator_.m_keypoint_map, [&](auto &map) {
-          return map.to_voxel_map(estimator_.m_constraints.get_values());
+          return map.to_voxel_map(estimator_.m_constraints.get_values(),
+                                  estimator_.m_params.map.max_dist_map);
         });
 
     std::tuple<std::string, std::string> map_names = {"planar", "point"};
@@ -143,9 +144,9 @@ public:
     for (const auto &[key, value] : params) {
       // handle form parameters
       if (key == "new_pose_threshold") {
-        params_.new_pose_threshold = std::get<double>(value);
+        params_.matcher.new_pose_threshold = std::get<double>(value);
       } else if (key == "max_num_rematches") {
-        params_.max_num_rematches = std::get<int>(value);
+        params_.matcher.max_num_rematches = std::get<int>(value);
       } else if (key == "num_threads") {
         params_.num_threads = std::get<int>(value);
       } else if (key == "disable_smoothing") {
@@ -156,7 +157,7 @@ public:
       else if (key == "max_dist_matching") {
         params_.matcher.max_dist_matching = std::get<double>(value);
       } else if (key == "max_dist_map") {
-        params_.matcher.max_dist_map = std::get<double>(value);
+        params_.map.max_dist_map = std::get<double>(value);
       }
 
       // handle constraint parameters

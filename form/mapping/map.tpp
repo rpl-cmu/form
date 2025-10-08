@@ -1,5 +1,7 @@
 #pragma once
+
 #include "form/mapping/map.hpp"
+#include <tbb/concurrent_vector.h>
 
 namespace form {
 
@@ -45,19 +47,20 @@ static const std::array<Eigen::Matrix<int, 3, 1>, 27> voxel_shifts{
      Eigen::Matrix<int, 3, 1>{-1, -1, -1}}};
 
 template <typename Point>
-[[nodiscard]] SearchResult<Point>
+[[nodiscard]] Match<Point>
 VoxelMap<Point>::find_closest(const Point &queryPoint) const noexcept {
   const Eigen::Matrix<int, 3, 1> coords = computeCoords(queryPoint);
-  SearchResult<Point> result;
+  Match<Point> result;
+  result.query = queryPoint;
 
   for (const auto &shift : voxel_shifts) {
     const Eigen::Matrix<int, 3, 1> shifted_coords = coords + shift;
     auto voxel = m_data.find(shifted_coords);
     if (voxel != m_data.end()) {
       for (const auto &point : voxel->second) {
-        const auto distance = (point.vec4() - queryPoint.vec4()).squaredNorm();
-        if (distance < result.distanceSquared) {
-          result.distanceSquared = distance;
+        const auto dist_sqrd = (point.vec4() - queryPoint.vec4()).squaredNorm();
+        if (dist_sqrd < result.dist_sqrd) {
+          result.dist_sqrd = dist_sqrd;
           result.point = point;
         }
       }
@@ -66,30 +69,10 @@ VoxelMap<Point>::find_closest(const Point &queryPoint) const noexcept {
   return result;
 }
 
-template <typename Point>
-VoxelMap<Point>
-VoxelMap<Point>::from_keypoint_map(const KeypointMap<Point> &keypoint_map,
-                                   const gtsam::Values &values) noexcept {
-  // Create a new map
-  VoxelMap world_map(keypoint_map.m_params.voxelWidth);
-
-  // Iterate over all the keypoints in the map
-  for (const auto &[frame_index, keypoints] : keypoint_map.m_frame_keypoints) {
-    // Get the pose of the frame
-    const auto &world_T_frame = values.at<gtsam::Pose3>(X(frame_index));
-
-    // Transform each keypoint into the world frame and add it to the map
-    for (const auto &keypoint : keypoints) {
-      world_map.push_back(keypoint.transform(world_T_frame));
-    }
-  }
-
-  return world_map;
-}
-
 // ------------------------- Keypoint Map ------------------------- //
 template <typename Point>
-KeypointMap<Point>::KeypointMap(const Params &params) noexcept : m_params(params) {}
+KeypointMap<Point>::KeypointMap(const KeypointMapParams &params) noexcept
+    : m_params(params) {}
 
 template <typename Point>
 std::vector<Point> &KeypointMap<Point>::get(const FrameIndex &frame_j) noexcept {
@@ -114,9 +97,42 @@ void KeypointMap<Point>::remove(const FrameIndex &frame_j) noexcept {
 }
 
 template <typename Point>
-VoxelMap<Point>
-KeypointMap<Point>::to_voxel_map(const gtsam::Values &values) const noexcept {
-  return VoxelMap<Point>::from_keypoint_map(*this, values);
+VoxelMap<Point> KeypointMap<Point>::to_voxel_map(const gtsam::Values &values,
+                                                 double voxel_width) const noexcept {
+  // Create a new map
+  VoxelMap<Point> world_map(voxel_width);
+
+  // Iterate over all the keypoints in the map
+  for (const auto &[frame_index, keypoints] : m_frame_keypoints) {
+    // Get the pose of the frame
+    const auto &world_T_frame = values.at<gtsam::Pose3>(X(frame_index));
+
+    // Transform each keypoint into the world frame and add it to the map
+    for (const auto &keypoint : keypoints) {
+      world_map.push_back(keypoint.transform(world_T_frame));
+    }
+  }
+
+  return world_map;
+}
+
+template <typename Point>
+void KeypointMap<Point>::insert_matches(
+    const tbb::concurrent_vector<Match<Point>> &matches) {
+  // Infer the frame
+  if (matches.empty()) {
+    return;
+  }
+  const FrameIndex frame_j = matches.front().query.scan;
+  auto &keypoints = get(frame_j);
+
+  double max_dist_map_sqrd = m_params.max_dist_map * m_params.max_dist_map;
+
+  for (const auto &match : matches) {
+    if (match.dist_sqrd > max_dist_map_sqrd) {
+      keypoints.push_back(match.query);
+    }
+  }
 }
 
 } // namespace form
