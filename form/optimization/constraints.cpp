@@ -9,14 +9,12 @@ using gtsam::Pose3;
 using gtsam::symbol_shorthand::X;
 
 namespace form {
-bool is_empty(const std::tuple<feature::PlanePoint::Ptr, feature::PointPoint::Ptr>
-                  &constraints) {
+bool is_empty(const std::tuple<PlanePoint::Ptr, PointPoint::Ptr> &constraints) {
   return std::get<0>(constraints)->num_constraints() == 0 &&
          std::get<1>(constraints)->num_constraints() == 0;
 }
 
-tsl::robin_map<FrameIndex,
-               std::tuple<feature::PlanePoint::Ptr, feature::PointPoint::Ptr>> &
+tsl::robin_map<FrameIndex, std::tuple<PlanePoint::Ptr, PointPoint::Ptr>> &
 ConstraintManager::get_constraints(const FrameIndex &frame_j) noexcept {
   // Check if it already exists
   auto search = m_constraints.find(frame_j);
@@ -25,8 +23,7 @@ ConstraintManager::get_constraints(const FrameIndex &frame_j) noexcept {
   }
   // If not, make it and return it
   else {
-    tsl::robin_map<FrameIndex,
-                   std::tuple<feature::PlanePoint::Ptr, feature::PointPoint::Ptr>>
+    tsl::robin_map<FrameIndex, std::tuple<PlanePoint::Ptr, PointPoint::Ptr>>
         new_constraints;
 
     m_constraints.insert(std::make_pair(frame_j, new_constraints));

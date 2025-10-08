@@ -252,48 +252,43 @@ NB_MODULE(_core, m) {
       .def_static("default_params", &FORM::default_params);
 
   // Expose extraction methods too
-  nb::class_<form::feature::KeypointExtractionParams>(m, "KeypointExtractionParams")
+  nb::class_<form::KeypointExtractionParams>(m, "KeypointExtractionParams")
       .def(nb::init<>())
-      .def_rw("neighbor_points",
-              &form::feature::KeypointExtractionParams::neighbor_points)
-      .def_rw("num_sectors", &form::feature::KeypointExtractionParams::num_sectors)
+      .def_rw("neighbor_points", &form::KeypointExtractionParams::neighbor_points)
+      .def_rw("num_sectors", &form::KeypointExtractionParams::num_sectors)
       .def_rw("planar_feats_per_sector",
-              &form::feature::KeypointExtractionParams::planar_feats_per_sector)
-      .def_rw("planar_threshold",
-              &form::feature::KeypointExtractionParams::planar_threshold)
+              &form::KeypointExtractionParams::planar_feats_per_sector)
+      .def_rw("planar_threshold", &form::KeypointExtractionParams::planar_threshold)
       .def_rw("point_feats_per_sector",
-              &form::feature::KeypointExtractionParams::point_feats_per_sector)
+              &form::KeypointExtractionParams::point_feats_per_sector)
       // Parameters for normal estimation
-      .def_rw("radius", &form::feature::KeypointExtractionParams::radius)
-      .def_rw("min_points", &form::feature::KeypointExtractionParams::min_points)
+      .def_rw("radius", &form::KeypointExtractionParams::radius)
+      .def_rw("min_points", &form::KeypointExtractionParams::min_points)
       // Based on LiDAR info
-      .def_rw("min_norm_squared",
-              &form::feature::KeypointExtractionParams::min_norm_squared)
-      .def_rw("max_norm_squared",
-              &form::feature::KeypointExtractionParams::max_norm_squared)
-      .def_rw("num_rows", &form::feature::KeypointExtractionParams::num_rows)
-      .def_rw("num_columns", &form::feature::KeypointExtractionParams::num_columns);
+      .def_rw("min_norm_squared", &form::KeypointExtractionParams::min_norm_squared)
+      .def_rw("max_norm_squared", &form::KeypointExtractionParams::max_norm_squared)
+      .def_rw("num_rows", &form::KeypointExtractionParams::num_rows)
+      .def_rw("num_columns", &form::KeypointExtractionParams::num_columns);
 
-  m.def("extract_keypoints",
-        [](const std::vector<Eigen::Vector3d> &points,
-           const form::feature::KeypointExtractionParams &params,
-           evalio::LidarParams &lidar_params) {
-          // Call the keypoint extraction function from the Tclio class
-          auto [planar_keypoints, point_keypoints] =
-              form::feature::extract_keypoints(points, params, 0);
+  m.def("extract_keypoints", [](const std::vector<Eigen::Vector3d> &points,
+                                const form::KeypointExtractionParams &params,
+                                evalio::LidarParams &lidar_params) {
+    // Call the keypoint extraction function from the Tclio class
+    auto [planar_keypoints, point_keypoints] =
+        form::extract_keypoints(points, params, 0);
 
-          // return a tuple of (planar_points, normals, point_points)
-          std::vector<Eigen::Vector3d> planar_points;
-          std::vector<Eigen::Vector3d> normals;
-          std::vector<Eigen::Vector3d> point_points;
-          for (const auto &keypoint : planar_keypoints) {
-            planar_points.emplace_back(keypoint.x, keypoint.y, keypoint.z);
-            normals.emplace_back(keypoint.nx, keypoint.ny, keypoint.nz);
-          }
-          for (const auto &keypoint : point_keypoints) {
-            point_points.emplace_back(keypoint.x, keypoint.y, keypoint.z);
-          }
+    // return a tuple of (planar_points, normals, point_points)
+    std::vector<Eigen::Vector3d> planar_points;
+    std::vector<Eigen::Vector3d> normals;
+    std::vector<Eigen::Vector3d> point_points;
+    for (const auto &keypoint : planar_keypoints) {
+      planar_points.emplace_back(keypoint.x, keypoint.y, keypoint.z);
+      normals.emplace_back(keypoint.nx, keypoint.ny, keypoint.nz);
+    }
+    for (const auto &keypoint : point_keypoints) {
+      point_points.emplace_back(keypoint.x, keypoint.y, keypoint.z);
+    }
 
-          return std::make_tuple(planar_points, normals, point_points);
-        });
+    return std::make_tuple(planar_points, normals, point_points);
+  });
 }

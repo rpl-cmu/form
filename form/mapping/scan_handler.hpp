@@ -54,8 +54,7 @@ public:
          std::function<size_t(FrameIndex)> connections) noexcept;
 
   const void fill_constraints(
-      tsl::robin_map<FrameIndex,
-                     std::tuple<feature::PlanePoint::Ptr, feature::PointPoint::Ptr>>
+      tsl::robin_map<FrameIndex, std::tuple<PlanePoint::Ptr, PointPoint::Ptr>>
           &constraints) noexcept;
 
   // ------------------------- Getters ------------------------- //

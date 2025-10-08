@@ -8,7 +8,7 @@
 #include "form/feature/type.hpp"
 #include "form/optimization/gtsam.h"
 
-namespace form::feature {
+namespace form {
 
 static void check(const gtsam::SharedNoiseModel &noiseModel, size_t m) {
   if (noiseModel && m != noiseModel->dim())
@@ -95,4 +95,4 @@ public:
   [[nodiscard]] gtsam::Key getKey_j() const noexcept { return keys_[1]; }
 };
 
-} // namespace form::feature
+} // namespace form

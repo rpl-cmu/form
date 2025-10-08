@@ -27,7 +27,7 @@ public:
   struct Params {
 
     // Extraction params
-    feature::FeatureExtractor::Params keypointExtraction;
+    FeatureExtractor::Params keypointExtraction;
 
     // Optimization params
     MatcherParams matcher;
@@ -44,7 +44,7 @@ public:
   Params m_params;
 
   // features
-  feature::FeatureExtractor m_extractor;
+  FeatureExtractor m_extractor;
 
   // optimization
   ConstraintManager m_constraints;

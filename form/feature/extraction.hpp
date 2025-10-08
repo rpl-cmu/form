@@ -14,7 +14,7 @@
 #include <limits>
 #include <optional>
 
-namespace form::feature {
+namespace form {
 
 struct KeypointExtractionParams {
   // Parameters for keypoint extraction
@@ -465,4 +465,4 @@ struct FeatureExtractor {
   }
 };
 
-} // namespace form::feature
+} // namespace form

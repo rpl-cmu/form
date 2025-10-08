@@ -25,7 +25,7 @@ using FrameIndex = size_t;
 class ConstraintManager {
 
 public:
-  using Factor = feature::FeatureFactor;
+  using Factor = FeatureFactor;
 
   struct Params {
     // Used for ablations, optimize a single pose at a time
@@ -66,8 +66,8 @@ private:
   // Note that j > i
   // These have to be modified when we rematch.
   using PairwiseConstraintsIndex = tsl::robin_map<
-      FrameIndex, tsl::robin_map<FrameIndex, std::tuple<feature::PlanePoint::Ptr,
-                                                        feature::PointPoint::Ptr>>>;
+      FrameIndex,
+      tsl::robin_map<FrameIndex, std::tuple<PlanePoint::Ptr, PointPoint::Ptr>>>;
   PairwiseConstraintsIndex m_constraints;
 
 public:
@@ -77,8 +77,7 @@ public:
   // ------------------------- Doers ------------------------- //
   // Get all the constraints for a given frame going backward
   // If they don't exist, a new one will be created
-  tsl::robin_map<FrameIndex,
-                 std::tuple<feature::PlanePoint::Ptr, feature::PointPoint::Ptr>> &
+  tsl::robin_map<FrameIndex, std::tuple<PlanePoint::Ptr, PointPoint::Ptr>> &
   get_constraints(const FrameIndex &frame_j) noexcept;
 
   // Optimize over the existing constraints, but don't save results

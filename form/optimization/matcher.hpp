@@ -20,12 +20,10 @@ public:
   Matcher(const MatcherParams &params) : m_params(params) {}
 
   template <int I>
-  void match(
-      const VoxelMap<Point> &map, const std::vector<Point> &keypoints,
-      const gtsam::Pose3 &init, const ConstraintManager &manager,
-      tsl::robin_map<FrameIndex,
-                     std::tuple<feature::PlanePoint::Ptr, feature::PointPoint::Ptr>>
-          &scan_constraints) {
+  void match(const VoxelMap<Point> &map, const std::vector<Point> &keypoints,
+             const gtsam::Pose3 &init, const ConstraintManager &manager,
+             tsl::robin_map<FrameIndex, std::tuple<PlanePoint::Ptr, PointPoint::Ptr>>
+                 &scan_constraints) {
     // Set everything up
     matches.clear();
     for (auto it = scan_constraints.begin(); it != scan_constraints.end(); ++it) {

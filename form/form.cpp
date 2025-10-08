@@ -27,7 +27,7 @@ Estimator::Estimator(const Estimator::Params &params) noexcept
 void Estimator::reset(const Estimator::Params &params) noexcept {
   m_params = params;
 
-  m_extractor = feature::FeatureExtractor(params.keypointExtraction);
+  m_extractor = FeatureExtractor(params.keypointExtraction);
 
   m_constraints = ConstraintManager(params.constraints);
   m_matcher = {Matcher<PlanarFeat>(params.matcher),

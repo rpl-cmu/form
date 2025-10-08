@@ -8,7 +8,7 @@
 #include <gtsam/linear/JacobianFactor.h>
 #include <gtsam/linear/NoiseModel.h>
 
-namespace form::feature {
+namespace form {
 // ------------------------- Separate Computation ------------------------- //
 [[nodiscard]] gtsam::Vector
 PlanePoint::evaluateError(const gtsam::Pose3 &Ti, const gtsam::Pose3 &Tj,
@@ -168,4 +168,4 @@ FeatureFactor::evaluateError(const gtsam::Pose3 &Ti, const gtsam::Pose3 &Tj,
   return residual;
 }
 
-} // namespace form::feature
+} // namespace form
