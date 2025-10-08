@@ -1,6 +1,6 @@
 pipelines:
   - pipeline: form
-    name: matcher_class_broken
+    name: new_keyscan_class
 
 datasets:
   # ncd20

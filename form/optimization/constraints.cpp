@@ -28,17 +28,7 @@ ConstraintManager::get_constraints(const FrameIndex &frame_j) noexcept {
     tsl::robin_map<FrameIndex,
                    std::tuple<feature::PlanePoint::Ptr, feature::PointPoint::Ptr>>
         new_constraints;
-    // Add empty vectors for all frames
-    for (const auto &frame_i : m_keyframes) {
-      new_constraints.insert(std::make_pair(
-          frame_i.idx, std::make_tuple(std::make_shared<feature::PlanePoint>(),
-                                       std::make_shared<feature::PointPoint>())));
-    }
-    for (const auto &frame_i : m_recent_frames) {
-      new_constraints.insert(std::make_pair(
-          frame_i.idx, std::make_tuple(std::make_shared<feature::PlanePoint>(),
-                                       std::make_shared<feature::PointPoint>())));
-    }
+
     m_constraints.insert(std::make_pair(frame_j, new_constraints));
     return m_constraints.at(frame_j);
   }
@@ -59,67 +49,6 @@ gtsam::Values ConstraintManager::optimize(bool fast) noexcept {
   }
 
   // Solve!
-}
-
-std::vector<FrameIndex> ConstraintManager::marginalize() noexcept {
-  std::vector<FrameIndex> marg_results;
-
-  // First we handle recent frames
-  if (m_recent_frames.size() > m_params.max_num_recent_frames) {
-    const auto rf = m_recent_frames.front();
-    m_recent_frames.pop_front();
-
-    // If it's a keyframe, add it to the keyframe indices
-    auto ratio =
-        static_cast<double>(num_recent_connections(rf.idx)) /
-        (static_cast<double>(rf.size * static_cast<double>(m_recent_frames.size())));
-
-    if (ratio > m_params.keyscan_match_ratio) {
-      m_keyframes.push_back(rf);
-    }
-    // If not, we marginalize it out
-    else {
-      marginalize_frame(rf.idx);
-      marg_results.push_back(rf.idx);
-    }
-  }
-
-  std::set<FrameIndex> finished_keyframes;
-  for (auto &kf : m_keyframes) {
-    // If this keyframe is connected to a recent frame, we don't marginalize it
-    if (num_recent_connections(kf.idx) > 0) {
-      kf.unused_count = 0;
-    } else {
-      ++kf.unused_count;
-    }
-
-    // If this keyframe has been unused for too long, we marginalize it out
-    if (kf.unused_count > m_params.max_steps_unused_keyframe) {
-      marginalize_frame(kf.idx);
-      marg_results.push_back(kf.idx);
-      finished_keyframes.insert(kf.idx);
-    }
-  }
-
-  m_keyframes.erase(std::remove_if(m_keyframes.begin(), m_keyframes.end(),
-                                   [&](const Frame &f) {
-                                     return finished_keyframes.find(f.idx) !=
-                                            finished_keyframes.end();
-                                   }),
-                    m_keyframes.end());
-
-  // Marginalize keyframe we have too many keyframes
-  // This should ideally never be reached in actuality
-  if ((m_params.max_num_keyframes > 0 &&
-       m_keyframes.size() > m_params.max_num_keyframes)) {
-    const auto kf = m_keyframes.front();
-    m_keyframes.pop_front();
-
-    marginalize_frame(kf.idx);
-    marg_results.push_back(kf.idx);
-  }
-
-  return marg_results;
 }
 
 void ConstraintManager::marginalize_frame(const FrameIndex &frame) noexcept {
@@ -198,21 +127,14 @@ void ConstraintManager::update_values(const gtsam::Values &values) noexcept {
   }
 }
 
-void ConstraintManager::add_pose(FrameIndex idx, const gtsam::Pose3 &pose,
-                                 size_t size) noexcept {
-  Frame new_frame(idx, size);
+void ConstraintManager::add_pose(FrameIndex idx, const gtsam::Pose3 &pose) noexcept {
   m_values.insert(X(idx), pose);
   m_frame = idx;
+  m_fast_linear = std::nullopt;
 
-  // If this is the first frame, add a prior and make it a keyframe
+  // If this is the first frame, add a prior
   if (idx == 0) {
     m_other_factors.addPrior(X(0), pose, m_params.pose_noise);
-    m_keyframes.push_back(new_frame);
-  }
-  // Otherwise add it to recent frames
-  else {
-    m_recent_frames.push_back(new_frame);
-    m_fast_linear = std::nullopt;
   }
 }
 
@@ -303,14 +225,12 @@ ConstraintManager::get_pose(const FrameIndex &frame) const noexcept {
 }
 
 const size_t
-ConstraintManager::num_recent_connections(const FrameIndex &frame) const noexcept {
-  // oldest recent connection
-  auto oldest_recent = m_recent_frames.front();
-
+ConstraintManager::num_recent_connections(const FrameIndex &frame,
+                                          const FrameIndex &oldest) const noexcept {
   // Count the number of recent connections to this frame
   size_t count = 0;
   for (const auto &[idx_j, constraints] : m_constraints) {
-    if (idx_j < oldest_recent.idx) {
+    if (idx_j < oldest) {
       continue;
     }
 

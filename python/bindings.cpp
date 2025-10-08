@@ -161,13 +161,13 @@ public:
 
       // handle constraint parameters
       else if (key == "max_num_keyframes") {
-        params_.constraints.max_num_keyframes = std::get<int>(value);
+        params_.scans.max_num_keyframes = std::get<int>(value);
       } else if (key == "max_steps_unused_keyframe") {
-        params_.constraints.max_steps_unused_keyframe = std::get<int>(value);
+        params_.scans.max_steps_unused_keyframe = std::get<int>(value);
       } else if (key == "max_num_recent_frames") {
-        params_.constraints.max_num_recent_frames = std::get<int>(value);
+        params_.scans.max_num_recent_frames = std::get<int>(value);
       } else if (key == "keyscan_match_ratio") {
-        params_.constraints.keyscan_match_ratio = std::get<double>(value);
+        params_.scans.keyscan_match_ratio = std::get<double>(value);
       }
 
       // handle keypoint extraction parameters

@@ -31,6 +31,7 @@ add_library(FORM
 	form/form.cpp
 	form/feature/factor.cpp
 	form/optimization/constraints.cpp
+	form/mapping/scan_handler.cpp
 )
 target_sources(FORM
 	PUBLIC

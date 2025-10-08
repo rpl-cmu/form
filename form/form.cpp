@@ -13,7 +13,7 @@ Estimator::Estimator(const Estimator::Params &params) noexcept
                 Matcher<PointFeat>(params.matcher)},
       m_keypoint_map{KeypointMap<PlanarFeat>(m_params.matcher.max_dist_matching),
                      KeypointMap<PointFeat>(m_params.matcher.max_dist_matching)},
-      m_extractor(params.keypointExtraction) {
+      m_scan_handler(params.scans), m_extractor(params.keypointExtraction) {
   // This global variable requires static duration storage to be able to manipulate
   // the max concurrency from TBB across the entire class
   // TODO: Move this to subclasses as well
@@ -26,10 +26,14 @@ Estimator::Estimator(const Estimator::Params &params) noexcept
 
 void Estimator::reset(const Estimator::Params &params) noexcept {
   m_params = params;
+
   m_extractor = feature::FeatureExtractor(params.keypointExtraction);
+
+  m_constraints = ConstraintManager(params.constraints);
   m_matcher = {Matcher<PlanarFeat>(params.matcher),
                Matcher<PointFeat>(params.matcher)};
-  m_constraints = ConstraintManager(params.constraints);
+
+  m_scan_handler = ScanHandler(params.scans);
   m_keypoint_map = {KeypointMap<PlanarFeat>(m_params.matcher.max_dist_matching),
                     KeypointMap<PointFeat>(m_params.matcher.max_dist_matching)};
 
@@ -45,7 +49,7 @@ Estimator::registerScan(const std::vector<Eigen::Vector3f> &scan) noexcept {
   //
   const auto keypoints = m_extractor(scan, m_frame);
   const auto num_keypoints =
-      std::get<0>(keypoints).size() + std::get<1>(keypoints).size();
+      std::apply([](auto &...kps) { return (kps.size() + ...); }, keypoints);
 
   //
   // ############################### Optimization ############################### //
@@ -63,7 +67,7 @@ Estimator::registerScan(const std::vector<Eigen::Vector3f> &scan) noexcept {
     // normalize rotation to avoid rounding errors
     prediction = Pose3(prediction.rotation().normalized(), prediction.translation());
   }
-  m_constraints.add_pose(m_frame, prediction, num_keypoints);
+  m_constraints.add_pose(m_frame, prediction);
 
   // Create the world map
   const auto world_map = tuple::transform(m_keypoint_map, [&](auto &map) {
@@ -73,6 +77,7 @@ Estimator::registerScan(const std::vector<Eigen::Vector3f> &scan) noexcept {
   // Prep storages for matches & constraints
   gtsam::Values new_values;
   auto &scan_constraints = m_constraints.get_constraints(m_frame);
+  m_scan_handler.fill_constraints(scan_constraints);
 
   for (size_t idx_rematch = 0; idx_rematch < m_params.max_num_rematches;
        ++idx_rematch) {
@@ -111,9 +116,18 @@ Estimator::registerScan(const std::vector<Eigen::Vector3f> &scan) noexcept {
     std::get<I>(m_matcher).insert_map(new_kp_map);
   });
 
-  // -------------------- Marginalization & Keyscan Selection -------------------- //
-  auto marg_frame = m_constraints.marginalize();
-  tuple::for_each(m_keypoint_map, [&](auto &map) { map.remove(marg_frame); });
+  // ------------------------- Keyscan Selection ------------------------- //
+  auto marg_frames =
+      m_scan_handler.update(m_frame, num_keypoints, [&](FrameIndex frame) {
+        return m_constraints.num_recent_connections(frame,
+                                                    m_scan_handler.oldest_rf().idx);
+      });
+
+  // -------------------- Marginalization -------------------- //
+  for (const auto &frame : marg_frames) {
+    m_constraints.marginalize_frame(frame);
+  }
+  tuple::for_each(m_keypoint_map, [&](auto &map) { map.remove(marg_frames); });
 
   ++m_frame;
 

@@ -3,6 +3,7 @@
 #include "form/feature/extraction.hpp"
 #include "form/feature/type.hpp"
 #include "form/mapping/map.hpp"
+#include "form/mapping/scan_handler.hpp"
 #include "form/optimization/constraints.hpp"
 #include "form/optimization/matcher.hpp"
 
@@ -26,17 +27,17 @@ public:
   struct Params {
 
     // TODO: Break up params into components?
-    // Keypoint extraction params
+    // Extraction params
     feature::FeatureExtractor::Params keypointExtraction;
 
     // Optimization params
     // TODO: Switch this to ICP params - doesn't have to be connected to the class
     // TODO: max_dist_map should be moved to a mapping params struct
     MatcherParams matcher;
-
-    // TODO: Move keyscan selection into it's own struct, will use most of these
-    // params
     ConstraintManager::Params constraints;
+
+    // Mapping params
+    ScanHandler::Params scans;
 
     // points must be within this percent of range to be matched
     double new_pose_threshold = 1e-4;
@@ -47,16 +48,15 @@ public:
 
   Params m_params;
 
-  // Extractor
+  // features
   feature::FeatureExtractor m_extractor;
 
-  // matcher
+  // optimization
+  ConstraintManager m_constraints;
   std::tuple<Matcher<PlanarFeat>, Matcher<PointFeat>> m_matcher;
 
-  // constraint & graph manager
-  ConstraintManager m_constraints;
-
-  // keypoint map
+  // mapping
+  ScanHandler m_scan_handler;
   std::tuple<KeypointMap<PlanarFeat>, KeypointMap<PointFeat>> m_keypoint_map;
 
   // current frame
