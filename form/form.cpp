@@ -13,7 +13,7 @@ Estimator::Estimator(const Estimator::Params &params) noexcept
                 Matcher<PointFeat>(params.matcher)},
       m_keypoint_map{KeypointMap<PlanarFeat>(m_params.map),
                      KeypointMap<PointFeat>(m_params.map)},
-      m_scan_handler(params.scans), m_extractor(params.keypointExtraction) {
+      m_scan_handler(params.scans), m_extractor(params.extraction) {
   // This global variable requires static duration storage to be able to manipulate
   // the max concurrency from TBB across the entire class
   // TODO: Move this to subclasses as well
@@ -27,7 +27,7 @@ Estimator::Estimator(const Estimator::Params &params) noexcept
 void Estimator::reset(const Estimator::Params &params) noexcept {
   m_params = params;
 
-  m_extractor = FeatureExtractor(params.keypointExtraction);
+  m_extractor = FeatureExtractor(params.extraction);
 
   m_constraints = ConstraintManager(params.constraints);
   m_matcher = {Matcher<PlanarFeat>(params.matcher),

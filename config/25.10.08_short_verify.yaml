@@ -1,6 +1,6 @@
 pipelines:
   - pipeline: form
-    name: new_keyscan_class
+    name: param_loading
 
 datasets:
   # ncd20
