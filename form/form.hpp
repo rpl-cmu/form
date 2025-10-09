@@ -54,21 +54,15 @@ public:
   ScanHandler m_scan_handler;
   std::tuple<KeypointMap<PlanarFeat>, KeypointMap<PointFeat>> m_keypoint_map;
 
-  // current frame
-  using FrameIndex = size_t;
-  FrameIndex m_frame;
-
 public:
   Estimator() : Estimator(Params()) {}
 
   Estimator(const Params &params) noexcept;
 
-  gtsam::Pose3 current_lidar_estimate() {
-    return m_constraints.get_pose(m_frame - 1);
-  }
+  gtsam::Pose3 current_lidar_estimate() { return m_constraints.get_current_pose(); }
 
   std::tuple<std::vector<PlanarFeat>, std::vector<PointFeat>>
-  registerScan(const std::vector<Eigen::Vector3f> &scan) noexcept;
+  register_scan(const std::vector<Eigen::Vector3f> &scan) noexcept;
 };
 
 namespace tuple {

@@ -156,7 +156,7 @@ public:
     }
 
     // run the estimator
-    auto [planar_kp, point_kp] = estimator_.registerScan(scan);
+    auto [planar_kp, point_kp] = estimator_.register_scan(scan);
     current_pose =
         pose_to_evalio(estimator_.current_lidar_estimate() * lidar_T_imu_);
 

@@ -65,20 +65,23 @@ private:
   // Scan j -- scan i -- Constraints
   // Note that j > i
   // These have to be modified when we rematch.
-  using PairwiseConstraintsIndex = tsl::robin_map<
-      FrameIndex,
-      tsl::robin_map<FrameIndex, std::tuple<PlanePoint::Ptr, PointPoint::Ptr>>>;
-  PairwiseConstraintsIndex m_constraints;
+  using ConstraintMap =
+      tsl::robin_map<FrameIndex, std::tuple<PlanePoint::Ptr, PointPoint::Ptr>>;
+  using ConstraintMapMap = tsl::robin_map<FrameIndex, ConstraintMap>;
+  ConstraintMapMap m_constraints;
 
 public:
   ConstraintManager() : m_params() {}
   ConstraintManager(const Params &params) : m_params(params) {}
 
   // ------------------------- Doers ------------------------- //
+
   // Get all the constraints for a given frame going backward
   // If they don't exist, a new one will be created
-  tsl::robin_map<FrameIndex, std::tuple<PlanePoint::Ptr, PointPoint::Ptr>> &
-  get_constraints(const FrameIndex &frame_j) noexcept;
+  ConstraintMap &get_constraints(const FrameIndex &frame_j) noexcept;
+  ConstraintMap &get_current_constraints() noexcept;
+
+  gtsam::Pose3 predict_next() const noexcept;
 
   // Optimize over the existing constraints, but don't save results
   // fast => linearize previous matches
@@ -89,16 +92,19 @@ public:
 
   // ------------------------- Setters ------------------------- //
   // Add a new pose to the graph
-  void add_pose(FrameIndex idx, const gtsam::Pose3 &pose) noexcept;
+  size_t add_pose(const gtsam::Pose3 &pose) noexcept;
 
   // Update an existing pose or values
-  void update_pose(const FrameIndex &frame, const gtsam::Pose3 &pose) noexcept;
   void update_values(const gtsam::Values &values) noexcept;
+  void update_pose(const FrameIndex &frame, const gtsam::Pose3 &pose) noexcept;
+  void update_current_pose(const gtsam::Pose3 &pose) noexcept;
 
   // ------------------------- Getters ------------------------- //
+  bool initialized() const noexcept { return m_values.size() > 0; }
   gtsam::NonlinearFactorGraph get_graph(bool fast) noexcept;
   gtsam::NonlinearFactorGraph get_single_graph() noexcept;
   const gtsam::Pose3 get_pose(const FrameIndex &frame) const noexcept;
+  const gtsam::Pose3 get_current_pose() const noexcept;
   const gtsam::Values &get_values() const noexcept { return m_values; }
   const size_t num_recent_connections(const FrameIndex &frame,
                                       const FrameIndex &oldest) const noexcept;

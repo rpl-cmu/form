@@ -45,7 +45,7 @@ private:
   std::deque<Frame> m_keyframes;
 
 public:
-  ScanHandler() : m_params() {};
+  ScanHandler() : m_params() {}
   ScanHandler(const Params &params) : m_params(params) {}
 
   // ------------------------- Doers ------------------------- //
@@ -58,10 +58,13 @@ public:
           &constraints) noexcept;
 
   // ------------------------- Getters ------------------------- //
-  const Frame newest_rf() const noexcept { return m_recent_frames.back(); }
-  const Frame oldest_rf() const noexcept { return m_recent_frames.front(); }
-  const Frame newest_kf() const noexcept { return m_keyframes.back(); }
-  const Frame oldest_kf() const noexcept { return m_keyframes.front(); }
+  const size_t size() const noexcept {
+    return m_keyframes.size() + m_recent_frames.size();
+  }
+  const size_t newest_rf() const noexcept { return m_recent_frames.back().idx; }
+  const size_t oldest_rf() const noexcept { return m_recent_frames.front().idx; }
+  const size_t newest_kf() const noexcept { return m_keyframes.back().idx; }
+  const size_t oldest_kf() const noexcept { return m_keyframes.front().idx; }
 
   const std::deque<Frame> &all_rf() const noexcept { return m_recent_frames; }
   const std::deque<Frame> &all_kf() const noexcept { return m_keyframes; }

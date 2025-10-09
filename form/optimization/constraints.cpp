@@ -14,7 +14,7 @@ bool is_empty(const std::tuple<PlanePoint::Ptr, PointPoint::Ptr> &constraints) {
          std::get<1>(constraints)->num_constraints() == 0;
 }
 
-tsl::robin_map<FrameIndex, std::tuple<PlanePoint::Ptr, PointPoint::Ptr>> &
+ConstraintManager::ConstraintMap &
 ConstraintManager::get_constraints(const FrameIndex &frame_j) noexcept {
   // Check if it already exists
   auto search = m_constraints.find(frame_j);
@@ -28,6 +28,43 @@ ConstraintManager::get_constraints(const FrameIndex &frame_j) noexcept {
 
     m_constraints.insert(std::make_pair(frame_j, new_constraints));
     return m_constraints.at(frame_j);
+  }
+}
+
+ConstraintManager::ConstraintMap &
+ConstraintManager::get_current_constraints() noexcept {
+  return get_constraints(m_frame);
+}
+
+gtsam::Pose3 ConstraintManager::predict_next() const noexcept {
+  // Handle the case where frame = 0 and we haven't started yet
+  if (!initialized()) {
+    return gtsam::Pose3::Identity();
+  }
+
+  size_t frame = m_frame + 1;
+
+  bool prev_exists = frame > 0 && m_values.exists(X(frame - 1));
+  bool prev_prev_exists = frame > 1 && m_values.exists(X(frame - 2));
+
+  // If we have the previous 2 poses, do a constant velocity model
+  if (prev_exists && prev_prev_exists) {
+    const auto prev_pose = get_pose(frame - 1);
+    const auto prev_prev_pose = get_pose(frame - 2);
+    auto prediction = prev_pose * (prev_prev_pose.inverse() * prev_pose);
+    // normalize rotation to avoid rounding errors
+    prediction = Pose3(prediction.rotation().normalized(), prediction.translation());
+    return prediction;
+  }
+
+  // If we just have the previous pose, return that
+  else if (prev_exists) {
+    return get_pose(frame - 1);
+  }
+
+  // If we don't have any previous poses, return identity
+  else {
+    return gtsam::Pose3::Identity();
   }
 }
 
@@ -124,20 +161,31 @@ void ConstraintManager::update_values(const gtsam::Values &values) noexcept {
   }
 }
 
-void ConstraintManager::add_pose(FrameIndex idx, const gtsam::Pose3 &pose) noexcept {
-  m_values.insert(X(idx), pose);
-  m_frame = idx;
+size_t ConstraintManager::add_pose(const gtsam::Pose3 &pose) noexcept {
+  // Only increment the frame if we've already initialized
+  // Skips incrementing for the first frame
+  if (initialized()) {
+    ++m_frame;
+  }
+
+  m_values.insert(X(m_frame), pose);
   m_fast_linear = std::nullopt;
 
   // If this is the first frame, add a prior
-  if (idx == 0) {
+  if (m_frame == 0) {
     m_other_factors.addPrior(X(0), pose, m_params.pose_noise);
   }
+
+  return m_frame;
 }
 
 void ConstraintManager::update_pose(const FrameIndex &frame,
                                     const gtsam::Pose3 &pose) noexcept {
   m_values.update(X(frame), pose);
+}
+
+void ConstraintManager::update_current_pose(const gtsam::Pose3 &pose) noexcept {
+  update_pose(m_frame, pose);
 }
 
 // ------------------------- Getters ------------------------- //
@@ -219,6 +267,10 @@ gtsam::NonlinearFactorGraph ConstraintManager::get_graph(bool fast) noexcept {
 const gtsam::Pose3
 ConstraintManager::get_pose(const FrameIndex &frame) const noexcept {
   return m_values.at<gtsam::Pose3>(X(frame));
+}
+
+const gtsam::Pose3 ConstraintManager::get_current_pose() const noexcept {
+  return get_pose(m_frame);
 }
 
 const size_t
