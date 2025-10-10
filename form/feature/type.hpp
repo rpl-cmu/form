@@ -7,7 +7,6 @@
 namespace form {
 
 struct PointFeat {
-  using type_t = double;
   double x;
   double y;
   double z;
@@ -57,7 +56,6 @@ struct PointFeat {
 
 // For storing in local map
 struct PlanarFeat {
-  using type_t = double;
   double x;
   double y;
   double z;

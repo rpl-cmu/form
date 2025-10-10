@@ -26,17 +26,16 @@ template <typename Point> struct Match {
   Point point;
 
   // By default, nothing has been found
-  typename Point::type_t dist_sqrd =
-      std::numeric_limits<typename Point::type_t>::max();
+  double dist_sqrd = std::numeric_limits<double>::max();
 
   [[nodiscard]] constexpr bool found() const noexcept {
-    return dist_sqrd != std::numeric_limits<typename Point::type_t>::max();
+    return dist_sqrd != std::numeric_limits<double>::max();
   }
 };
 
 template <typename Point> class VoxelMap {
 private:
-  typename Point::type_t m_voxel_width = 0.5;
+  double m_voxel_width = 0.5;
   tsl::robin_map<Eigen::Matrix<int, 3, 1>, std::vector<Point>> m_data;
 
   [[nodiscard]] Eigen::Matrix<int, 3, 1>

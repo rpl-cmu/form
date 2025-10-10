@@ -193,30 +193,30 @@ NB_MODULE(_core, m) {
       .def_static("default_params", &FORM::default_params);
 
   // Expose extraction methods too
-  nb::class_<form::KeypointExtractionParams>(m, "KeypointExtractionParams")
+  nb::class_<form::FeatureExtractor::Params>(m, "KeypointExtractionParams")
       .def(nb::init<>())
-      .def_rw("neighbor_points", &form::KeypointExtractionParams::neighbor_points)
-      .def_rw("num_sectors", &form::KeypointExtractionParams::num_sectors)
+      .def_rw("neighbor_points", &form::FeatureExtractor::Params::neighbor_points)
+      .def_rw("num_sectors", &form::FeatureExtractor::Params::num_sectors)
       .def_rw("planar_feats_per_sector",
-              &form::KeypointExtractionParams::planar_feats_per_sector)
-      .def_rw("planar_threshold", &form::KeypointExtractionParams::planar_threshold)
+              &form::FeatureExtractor::Params::planar_feats_per_sector)
+      .def_rw("planar_threshold", &form::FeatureExtractor::Params::planar_threshold)
       .def_rw("point_feats_per_sector",
-              &form::KeypointExtractionParams::point_feats_per_sector)
+              &form::FeatureExtractor::Params::point_feats_per_sector)
       // Parameters for normal estimation
-      .def_rw("radius", &form::KeypointExtractionParams::radius)
-      .def_rw("min_points", &form::KeypointExtractionParams::min_points)
+      .def_rw("radius", &form::FeatureExtractor::Params::radius)
+      .def_rw("min_points", &form::FeatureExtractor::Params::min_points)
       // Based on LiDAR info
-      .def_rw("min_norm_squared", &form::KeypointExtractionParams::min_norm_squared)
-      .def_rw("max_norm_squared", &form::KeypointExtractionParams::max_norm_squared)
-      .def_rw("num_rows", &form::KeypointExtractionParams::num_rows)
-      .def_rw("num_columns", &form::KeypointExtractionParams::num_columns);
+      .def_rw("min_norm_squared", &form::FeatureExtractor::Params::min_norm_squared)
+      .def_rw("max_norm_squared", &form::FeatureExtractor::Params::max_norm_squared)
+      .def_rw("num_rows", &form::FeatureExtractor::Params::num_rows)
+      .def_rw("num_columns", &form::FeatureExtractor::Params::num_columns);
 
   m.def("extract_keypoints", [](const std::vector<Eigen::Vector3d> &points,
-                                const form::KeypointExtractionParams &params,
+                                const form::FeatureExtractor::Params &params,
                                 evalio::LidarParams &lidar_params) {
     // Call the keypoint extraction function from the Tclio class
     auto [planar_keypoints, point_keypoints] =
-        form::extract_keypoints(points, params, 0);
+        form::FeatureExtractor(params, 0).extract(points, 0);
 
     // return a tuple of (planar_points, normals, point_points)
     std::vector<Eigen::Vector3d> planar_points;

@@ -1,6 +1,6 @@
 pipelines:
   - pipeline: form
-    name: marg_together
+    name: keypoint_class_final
 
 datasets:
   # ncd20

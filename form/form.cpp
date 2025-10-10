@@ -29,7 +29,7 @@ Estimator::register_scan(const std::vector<Eigen::Vector3f> &scan) noexcept {
   auto [frame_idx, scan_constraints] = m_constraints.add_next_pose(prediction);
 
   // ----------------------------- Extract Features ----------------------------- //
-  const auto keypoints = m_extractor(scan, frame_idx);
+  const auto keypoints = m_extractor.extract(scan, frame_idx);
   const auto num_keypoints =
       std::apply([](auto &...kps) { return (kps.size() + ...); }, keypoints);
 
