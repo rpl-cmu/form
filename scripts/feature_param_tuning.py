@@ -9,7 +9,7 @@ from evalio.types import LidarParams
 from evalio import datasets as ds
 from pathlib import Path
 
-from form import extract_keypoints_feature, KeypointExtractionParams_feature
+from form import extract_keypoints, KeypointExtractionParams
 
 
 recording_id = uuid.uuid4()
@@ -75,7 +75,7 @@ def update_keypoints(
 ):
     scan, params_lidar = load_scan(dataset_name, sequence_name, index)
 
-    params_extract = KeypointExtractionParams_feature()
+    params_extract = KeypointExtractionParams()
     params_extract.neighbor_points = neighbor_points
     params_extract.num_sectors = num_sectors
     params_extract.planar_feats_per_sector = planar_feats_per_sector
@@ -86,7 +86,7 @@ def update_keypoints(
     params_extract.min_norm_squared = params_lidar.min_range**2
     params_extract.max_norm_squared = params_lidar.max_range**2
 
-    planar, normals, points = extract_keypoints_feature(
+    planar, normals, points = extract_keypoints(
         scan,  # type: ignore
         params_extract,
         params_lidar,
@@ -124,7 +124,7 @@ def update_keypoints(
 
 
 # name, min, max, step
-params = KeypointExtractionParams_feature()
+params = KeypointExtractionParams()
 sliders = [
     ["neighbor_points", 0, 10, 1],
     ["num_sectors", 1, 10, 1],
