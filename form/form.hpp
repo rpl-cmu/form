@@ -6,7 +6,6 @@
 #include "form/mapping/scan_handler.hpp"
 #include "form/optimization/constraints.hpp"
 #include "form/optimization/matcher.hpp"
-#include "form/utils.hpp"
 
 #include <gtsam/geometry/Pose3.h>
 #include <gtsam/inference/Symbol.h>

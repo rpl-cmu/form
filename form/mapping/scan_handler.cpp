@@ -1,4 +1,6 @@
 #include "form/mapping/scan_handler.hpp"
+#include <algorithm>
+#include <set>
 
 namespace form {
 
@@ -65,22 +67,6 @@ ScanHandler::update(FrameIndex idx, size_t size,
   }
 
   return marg_results;
-}
-
-const void ScanHandler::fill_constraints(
-    tsl::robin_map<FrameIndex, std::tuple<PlanePoint::Ptr, PointPoint::Ptr>>
-        &constraints) noexcept {
-  // Add empty vectors for all frames
-  for (const auto &frame_i : m_keyframes) {
-    constraints.insert(std::make_pair(
-        frame_i.idx, std::make_tuple(std::make_shared<PlanePoint>(),
-                                     std::make_shared<PointPoint>())));
-  }
-  for (const auto &frame_i : m_recent_frames) {
-    constraints.insert(std::make_pair(
-        frame_i.idx, std::make_tuple(std::make_shared<PlanePoint>(),
-                                     std::make_shared<PointPoint>())));
-  }
 }
 
 } // namespace form

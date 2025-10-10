@@ -1,10 +1,8 @@
 #include "tsl/robin_map.h"
-#include <algorithm>
 #include <cstdint>
 #include <cstdio>
 #include <deque>
 #include <functional>
-#include <set>
 #include <vector>
 
 #include "form/feature/factor.hpp"

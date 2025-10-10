@@ -3,7 +3,6 @@ build*
 # pixi environments
 .pixi
 *.egg-info
-.clangd
 compile_commands.json
 
 # vscode environments

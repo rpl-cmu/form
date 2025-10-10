@@ -90,10 +90,11 @@ public:
   // Marginalize out a specific frame
   void marginalize_frame(const FrameIndex &frame) noexcept;
 
-  // ------------------------- Setters ------------------------- //
   // Add a new pose to the graph
-  size_t add_pose(const gtsam::Pose3 &pose) noexcept;
+  std::tuple<size_t, ConstraintMap &>
+  add_next_pose(const gtsam::Pose3 &pose) noexcept;
 
+  // ------------------------- Setters ------------------------- //
   // Update an existing pose or values
   void update_values(const gtsam::Values &values) noexcept;
   void update_pose(const FrameIndex &frame, const gtsam::Pose3 &pose) noexcept;

@@ -4,6 +4,7 @@
 #include <gtsam/nonlinear/NonlinearFactorGraph.h>
 #include <gtsam/nonlinear/NonlinearOptimizerParams.h>
 #include <gtsam/nonlinear/Values.h>
+#include <tuple>
 
 using gtsam::Pose3;
 using gtsam::symbol_shorthand::X;
@@ -25,6 +26,16 @@ ConstraintManager::get_constraints(const FrameIndex &frame_j) noexcept {
   else {
     tsl::robin_map<FrameIndex, std::tuple<PlanePoint::Ptr, PointPoint::Ptr>>
         new_constraints;
+
+    // Make the new entry for each previous frame
+    for (const auto key : m_values.keys()) {
+      auto i = gtsam::Symbol(key).index();
+      if (i == frame_j)
+        continue;
+      new_constraints.insert(
+          std::make_pair(i, std::make_tuple(std::make_shared<PlanePoint>(),
+                                            std::make_shared<PointPoint>())));
+    }
 
     m_constraints.insert(std::make_pair(frame_j, new_constraints));
     return m_constraints.at(frame_j);
@@ -161,7 +172,8 @@ void ConstraintManager::update_values(const gtsam::Values &values) noexcept {
   }
 }
 
-size_t ConstraintManager::add_pose(const gtsam::Pose3 &pose) noexcept {
+std::tuple<size_t, ConstraintManager::ConstraintMap &>
+ConstraintManager::add_next_pose(const gtsam::Pose3 &pose) noexcept {
   // Only increment the frame if we've already initialized
   // Skips incrementing for the first frame
   if (initialized()) {
@@ -176,7 +188,7 @@ size_t ConstraintManager::add_pose(const gtsam::Pose3 &pose) noexcept {
     m_other_factors.addPrior(X(0), pose, m_params.pose_noise);
   }
 
-  return m_frame;
+  return std::tie(m_frame, get_current_constraints());
 }
 
 void ConstraintManager::update_pose(const FrameIndex &frame,

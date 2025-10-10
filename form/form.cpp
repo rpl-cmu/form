@@ -1,4 +1,5 @@
 #include "form/form.hpp"
+#include "form/utils.hpp"
 
 namespace form {
 
@@ -25,7 +26,7 @@ Estimator::register_scan(const std::vector<Eigen::Vector3f> &scan) noexcept {
   // ------------------------------ Initialization ------------------------------ //
   // This needs to go first to get the frame index
   Pose3 prediction = m_constraints.predict_next();
-  size_t frame_idx = m_constraints.add_pose(prediction);
+  auto [frame_idx, scan_constraints] = m_constraints.add_next_pose(prediction);
 
   // ----------------------------- Extract Features ----------------------------- //
   const auto keypoints = m_extractor(scan, frame_idx);
@@ -35,7 +36,6 @@ Estimator::register_scan(const std::vector<Eigen::Vector3f> &scan) noexcept {
   //
   // ############################### Optimization ############################### //
   //
-
   // ---------------------------- Generate World Map ---------------------------- //
   const auto world_map = tuple::transform(m_keypoint_map, [&](auto &map) {
     return map.to_voxel_map(m_constraints.get_values(),
@@ -43,12 +43,8 @@ Estimator::register_scan(const std::vector<Eigen::Vector3f> &scan) noexcept {
                             m_params.matcher.max_dist_matching);
   });
 
-  // Prep storages for matches & constraints
-  gtsam::Values new_values;
-  auto &scan_constraints = m_constraints.get_current_constraints();
-  m_scan_handler.fill_constraints(scan_constraints);
-
   // ICP loop
+  gtsam::Values new_values;
   for (size_t idx = 0; idx < m_params.matcher.max_num_rematches; ++idx) {
     auto before = m_constraints.get_current_pose();
 
