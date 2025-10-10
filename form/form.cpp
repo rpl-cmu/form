@@ -1,5 +1,4 @@
 #include "form/form.hpp"
-#include <tbb/global_control.h>
 
 namespace form {
 
@@ -7,26 +6,14 @@ using gtsam::Pose3;
 using gtsam::Velocity3;
 using gtsam::symbol_shorthand::X;
 
-tbb::global_control set_num_threads(size_t num_threads) {
-  size_t max_num_threads =
-      num_threads > 0 ? num_threads : tbb::this_task_arena::max_concurrency();
-  return tbb::global_control(tbb::global_control::max_allowed_parallelism,
-                             max_num_threads);
-}
-
 Estimator::Estimator(const Estimator::Params &params) noexcept
-    : m_params(params), m_extractor(params.extraction),
+    : m_params(params), m_extractor(params.extraction, params.num_threads),
       m_constraints(params.constraints),
-      m_matcher{Matcher<PlanarFeat>(params.matcher),
-                Matcher<PointFeat>(params.matcher)},
+      m_matcher{Matcher<PlanarFeat>(params.matcher, params.num_threads),
+                Matcher<PointFeat>(params.matcher, params.num_threads)},
       m_scan_handler(params.scans),
       m_keypoint_map{KeypointMap<PlanarFeat>(m_params.map),
-                     KeypointMap<PointFeat>(m_params.map)} {
-  // This global variable requires static duration storage to be able to manipulate
-  // the max concurrency from TBB across the entire class
-  // TODO: Move this to subclasses as well
-  static const auto tbb_control_settings = set_num_threads(params.num_threads);
-}
+                     KeypointMap<PointFeat>(m_params.map)} {}
 
 std::tuple<std::vector<PlanarFeat>, std::vector<PointFeat>>
 Estimator::register_scan(const std::vector<Eigen::Vector3f> &scan) noexcept {
@@ -36,6 +23,7 @@ Estimator::register_scan(const std::vector<Eigen::Vector3f> &scan) noexcept {
   // ############################ Feature Extraction ############################ //
   //
   // ------------------------------ Initialization ------------------------------ //
+  // This needs to go first to get the frame index
   Pose3 prediction = m_constraints.predict_next();
   size_t frame_idx = m_constraints.add_pose(prediction);
 
@@ -48,9 +36,10 @@ Estimator::register_scan(const std::vector<Eigen::Vector3f> &scan) noexcept {
   // ############################### Optimization ############################### //
   //
 
-  // Create the world map
+  // ---------------------------- Generate World Map ---------------------------- //
   const auto world_map = tuple::transform(m_keypoint_map, [&](auto &map) {
     return map.to_voxel_map(m_constraints.get_values(),
+                            // make voxel size match the max matching distance
                             m_params.matcher.max_dist_matching);
   });
 

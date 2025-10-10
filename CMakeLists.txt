@@ -45,10 +45,13 @@ target_sources(FORM
 		form/feature/extraction.hpp
 		# optimization
 		form/optimization/constraints.hpp
+		form/optimization/gtsam.hpp
 		# mapping
 		form/mapping/map.hpp
+		form/mapping/scan_handler.hpp
 		# core
 		form/form.hpp
+		form/utils.hpp
 )
 target_link_libraries(FORM
 	PUBLIC

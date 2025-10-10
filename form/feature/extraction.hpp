@@ -1,6 +1,7 @@
 #pragma once
 
 #include "form/feature/type.hpp"
+#include "form/utils.hpp"
 #include <Eigen/Dense>
 
 #include <Eigen/src/Core/Matrix.h>
@@ -453,7 +454,9 @@ struct FeatureExtractor {
   using Params = KeypointExtractionParams;
   Params params;
 
-  FeatureExtractor(const Params &params) : params(params) {}
+  FeatureExtractor(const Params &params, size_t num_threads) : params(params) {
+    static const auto tbb_control_settings = set_num_threads(num_threads);
+  }
 
   template <typename Point>
   std::tuple<std::vector<PlanarFeat>, std::vector<PointFeat>>

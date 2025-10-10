@@ -6,7 +6,7 @@
 #include <vector>
 
 #include "form/feature/type.hpp"
-#include "form/optimization/gtsam.h"
+#include "form/optimization/gtsam.hpp"
 
 namespace form {
 

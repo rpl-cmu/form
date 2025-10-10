@@ -1,5 +1,6 @@
 #include "form/mapping/map.hpp"
 #include "form/optimization/constraints.hpp"
+#include "form/utils.hpp"
 #include <tbb/concurrent_vector.h>
 #include <tbb/parallel_for.h>
 
@@ -17,7 +18,9 @@ public:
   tbb::concurrent_vector<Match<Point>> matches;
 
 public:
-  Matcher(const MatcherParams &params) : m_params(params) {}
+  Matcher(const MatcherParams &params, size_t num_threads) : m_params(params) {
+    static const auto tbb_control_settings = set_num_threads(num_threads);
+  }
 
   template <int I>
   void match(const VoxelMap<Point> &map, const std::vector<Point> &keypoints,

@@ -14,31 +14,6 @@ make it faster when sparsity isn't a concern.
 */
 namespace form {
 
-class Timer {
-public:
-  Timer() : m_start(std::chrono::high_resolution_clock::now()) {}
-
-  void reset() { m_start = std::chrono::high_resolution_clock::now(); }
-
-  static void print(double duration, std::string name) {
-    std::printf("%s: %f ms\n", name.c_str(), duration);
-  }
-
-  double elapsed(std::optional<std::string> name = std::nullopt) {
-    using namespace std::chrono;
-    auto end = high_resolution_clock::now();
-    duration<double, std::milli> diff = end - m_start;
-    if (name) {
-      print(diff.count(), *name);
-    }
-    reset();
-    return diff.count();
-  }
-
-private:
-  std::chrono::high_resolution_clock::time_point m_start;
-};
-
 /// Extension of LM that uses dense optimization instead of sparse bayes tree solver.
 class DenseLMOptimizer : public gtsam::LevenbergMarquardtOptimizer {
 public:
