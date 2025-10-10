@@ -8,13 +8,6 @@
 #include "form/optimization/matcher.hpp"
 
 #include <gtsam/geometry/Pose3.h>
-#include <gtsam/inference/Symbol.h>
-#include <gtsam/navigation/CombinedImuFactor.h>
-#include <gtsam/navigation/ImuBias.h>
-#include <gtsam/navigation/NavState.h>
-#include <gtsam/nonlinear/LevenbergMarquardtParams.h>
-#include <gtsam/nonlinear/NonlinearFactorGraph.h>
-
 #include <tbb/global_control.h>
 
 #include <Eigen/Core>

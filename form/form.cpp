@@ -85,9 +85,7 @@ Estimator::register_scan(const std::vector<Eigen::Vector3f> &scan) noexcept {
   auto marg_frames = m_scan_handler.update(frame_idx, num_keypoints, connections);
 
   // ----------------------------- Marginalization ----------------------------- //
-  for (const auto &frame : marg_frames) {
-    m_constraints.marginalize_frame(frame);
-  }
+  m_constraints.marginalize(marg_frames);
   tuple::for_each(m_keypoint_map, [&](auto &map) { map.remove(marg_frames); });
 
   return keypoints;

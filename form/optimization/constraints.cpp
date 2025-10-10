@@ -96,10 +96,12 @@ gtsam::Values ConstraintManager::optimize(bool fast) noexcept {
   // Solve!
 }
 
-void ConstraintManager::marginalize_frame(const FrameIndex &frame) noexcept {
+void ConstraintManager::marginalize(const std::vector<FrameIndex> &frames) noexcept {
 
-  const auto pose_key = X(frame);
-  gtsam::KeyVector keys{pose_key};
+  gtsam::KeyVector keys;
+  for (const auto &f : frames) {
+    keys.push_back(X(f));
+  }
 
   gtsam::NonlinearFactorGraph dropped_factors;
 
@@ -108,7 +110,7 @@ void ConstraintManager::marginalize_frame(const FrameIndex &frame) noexcept {
   for (auto iter = m_other_factors.begin(); iter != m_other_factors.end(); ++iter) {
     if (*iter) {
       for (auto key : (*iter)->keys()) {
-        if (pose_key == key) {
+        if (std::find(keys.begin(), keys.end(), key) != keys.end()) {
           dropped_factors.push_back(*iter);
           m_empty_slots.push_back(index);
           *iter = gtsam::NonlinearFactor::shared_ptr();
@@ -120,13 +122,17 @@ void ConstraintManager::marginalize_frame(const FrameIndex &frame) noexcept {
   }
 
   // Planar constraint factors
+  auto is_marg_frame = [&frames](const FrameIndex &index) {
+    return std::find(frames.begin(), frames.end(), index) != frames.end();
+  };
+
   for (const auto &[j, scan_constraints] : m_constraints) {
     const auto pose_j_key = X(j);
     for (const auto &[i, planar_constraints] : scan_constraints) {
       if (is_empty(planar_constraints))
         continue;
 
-      if (i == frame || j == frame) {
+      if (is_marg_frame(i) || is_marg_frame(j)) {
         dropped_factors.push_back(Factor(X(i), pose_j_key, planar_constraints,
                                          m_params.planar_constraint_sigma));
       }
@@ -151,14 +157,18 @@ void ConstraintManager::marginalize_frame(const FrameIndex &frame) noexcept {
   }
 
   // Erase the keys from the values
-  m_values.erase(pose_key);
+  for (const auto &k : keys) {
+    m_values.erase(k);
+  }
 
   // Erase from constraints
-  m_constraints.erase(frame);
-  for (auto it = m_constraints.begin(); it != m_constraints.end(); ++it) {
-    auto search = it->second.find(frame);
-    if (search != it->second.end()) {
-      it.value().erase(search);
+  for (const auto &f : frames) {
+    m_constraints.erase(f);
+    for (auto it = m_constraints.begin(); it != m_constraints.end(); ++it) {
+      auto search = it->second.find(f);
+      if (search != it->second.end()) {
+        it.value().erase(search);
+      }
     }
   }
 }

@@ -1,6 +1,6 @@
 pipelines:
   - pipeline: form
-    name: lots_o_changes
+    name: marg_together
 
 datasets:
     # ncd20

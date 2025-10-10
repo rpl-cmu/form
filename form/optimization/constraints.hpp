@@ -88,7 +88,7 @@ public:
   gtsam::Values optimize(bool fast = false) noexcept;
 
   // Marginalize out a specific frame
-  void marginalize_frame(const FrameIndex &frame) noexcept;
+  void marginalize(const std::vector<FrameIndex> &frames) noexcept;
 
   // Add a new pose to the graph
   std::tuple<size_t, ConstraintMap &>
