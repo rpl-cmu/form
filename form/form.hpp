@@ -1,9 +1,9 @@
 #pragma once
 
 #include "form/feature/extraction.hpp"
-#include "form/feature/type.hpp"
+#include "form/feature/features.hpp"
+#include "form/mapping/keyscanner.hpp"
 #include "form/mapping/map.hpp"
-#include "form/mapping/scan_handler.hpp"
 #include "form/optimization/constraints.hpp"
 #include "form/optimization/matcher.hpp"
 
@@ -15,10 +15,8 @@
 
 namespace form {
 
-class Estimator {
-public:
+struct Estimator {
   struct Params {
-
     // Extraction params
     FeatureExtractor::Params extraction;
 
@@ -27,14 +25,12 @@ public:
     ConstraintManager::Params constraints;
 
     // Mapping params
-    ScanHandler::Params scans;
+    KeyScanner::Params scans;
     KeypointMapParams map;
 
     // points must be within this percent of range to be matched
     size_t num_threads = 0;
   };
-
-  Params m_params;
 
   // features
   FeatureExtractor m_extractor;
@@ -44,10 +40,11 @@ public:
   std::tuple<Matcher<PlanarFeat>, Matcher<PointFeat>> m_matcher;
 
   // mapping
-  ScanHandler m_scan_handler;
+  KeyScanner m_keyscanner;
   std::tuple<KeypointMap<PlanarFeat>, KeypointMap<PointFeat>> m_keypoint_map;
 
-public:
+  Params m_params;
+
   Estimator() : Estimator(Params()) {}
 
   Estimator(const Params &params) noexcept;

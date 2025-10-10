@@ -31,7 +31,7 @@ add_library(FORM
 	form/form.cpp
 	form/feature/factor.cpp
 	form/optimization/constraints.cpp
-	form/mapping/scan_handler.cpp
+	form/mapping/keyscanner.cpp
 )
 target_sources(FORM
 	PUBLIC
@@ -41,14 +41,14 @@ target_sources(FORM
 	FILES 
 		# feature
 		form/feature/factor.hpp
-		form/feature/type.hpp
+		form/feature/features.hpp
 		form/feature/extraction.hpp
 		# optimization
 		form/optimization/constraints.hpp
 		form/optimization/gtsam.hpp
 		# mapping
 		form/mapping/map.hpp
-		form/mapping/scan_handler.hpp
+		form/mapping/keyscanner.hpp
 		# core
 		form/form.hpp
 		form/utils.hpp

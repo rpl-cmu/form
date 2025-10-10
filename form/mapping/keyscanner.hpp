@@ -19,7 +19,7 @@ struct Frame {
   Frame(size_t idx_, size_t size_ = 0) : idx(idx_), size(size_) {}
 };
 
-class ScanHandler {
+class KeyScanner {
 public:
   struct Params {
     // Maximum number of keyframes to keep
@@ -43,8 +43,8 @@ private:
   std::deque<Frame> m_keyframes;
 
 public:
-  ScanHandler() : m_params() {}
-  ScanHandler(const Params &params) : m_params(params) {}
+  KeyScanner() : m_params() {}
+  KeyScanner(const Params &params) : m_params(params) {}
 
   // ------------------------- Doers ------------------------- //
   std::vector<FrameIndex>

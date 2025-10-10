@@ -1,4 +1,4 @@
-#include "form/mapping/scan_handler.hpp"
+#include "form/mapping/keyscanner.hpp"
 #include <algorithm>
 #include <set>
 
@@ -6,8 +6,8 @@ namespace form {
 
 // ------------------------- Doers ------------------------- //
 std::vector<FrameIndex>
-ScanHandler::update(FrameIndex idx, size_t size,
-                    std::function<size_t(FrameIndex)> connections) noexcept {
+KeyScanner::update(FrameIndex idx, size_t size,
+                   std::function<size_t(FrameIndex)> connections) noexcept {
   if (idx == 0) {
     m_keyframes.push_back(Frame(idx, size));
   } else {

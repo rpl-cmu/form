@@ -12,7 +12,7 @@ Estimator::Estimator(const Estimator::Params &params) noexcept
       m_constraints(params.constraints),
       m_matcher{Matcher<PlanarFeat>(params.matcher, params.num_threads),
                 Matcher<PointFeat>(params.matcher, params.num_threads)},
-      m_scan_handler(params.scans),
+      m_keyscanner(params.scans),
       m_keypoint_map{KeypointMap<PlanarFeat>(m_params.map),
                      KeypointMap<PointFeat>(m_params.map)} {}
 
@@ -80,9 +80,9 @@ Estimator::register_scan(const std::vector<Eigen::Vector3f> &scan) noexcept {
 
   // ---------------------------- Keyscan Selection ---------------------------- //
   const auto connections = [&](FrameIndex frame) {
-    return m_constraints.num_recent_connections(frame, m_scan_handler.oldest_rf());
+    return m_constraints.num_recent_connections(frame, m_keyscanner.oldest_rf());
   };
-  auto marg_frames = m_scan_handler.update(frame_idx, num_keypoints, connections);
+  auto marg_frames = m_keyscanner.update(frame_idx, num_keypoints, connections);
 
   // ----------------------------- Marginalization ----------------------------- //
   m_constraints.marginalize(marg_frames);

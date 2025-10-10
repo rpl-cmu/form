@@ -1,6 +1,6 @@
 #pragma once
 
-#include "form/feature/type.hpp"
+#include "form/feature/features.hpp"
 #include "form/utils.hpp"
 #include <Eigen/Dense>
 
@@ -28,7 +28,8 @@ template <typename T> struct Curvature {
   }
 };
 
-struct FeatureExtractor {
+class FeatureExtractor {
+public:
   struct Params {
     // Parameters for keypoint extraction
     size_t neighbor_points = 5;
@@ -54,6 +55,12 @@ struct FeatureExtractor {
     static const auto tbb_control_settings = set_num_threads(num_threads);
   }
 
+  // ------------------------- Entrypoint ------------------------- //
+  template <typename Point>
+  [[nodiscard]] std::tuple<std::vector<PlanarFeat>, std::vector<PointFeat>>
+  extract(const std::vector<Point> &scan, size_t scan_idx) const;
+
+private:
   // ------------------------- Validators ------------------------- //
   template <typename Point>
   std::vector<bool> compute_valid_points(const std::vector<Point> &scan) const;
@@ -96,11 +103,6 @@ struct FeatureExtractor {
   template <typename Point>
   void find_neighbors(const size_t &idx, const std::vector<Point> &scan,
                       std::vector<Point> &out) const noexcept;
-
-  // Assume the points are in row-major order
-  template <typename Point>
-  [[nodiscard]] std::tuple<std::vector<PlanarFeat>, std::vector<PointFeat>>
-  extract(const std::vector<Point> &scan, size_t scan_idx) const;
 };
 } // namespace form
 

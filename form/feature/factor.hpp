@@ -5,7 +5,7 @@
 #include <gtsam/nonlinear/NonlinearFactor.h>
 #include <vector>
 
-#include "form/feature/type.hpp"
+#include "form/feature/features.hpp"
 #include "form/optimization/gtsam.hpp"
 
 namespace form {
