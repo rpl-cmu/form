@@ -2,12 +2,11 @@
 <h1>FORM</h1>
 <h3 style="font-weight: normal"><b>F</b>ixed-Lag <b>O</b>dometry with <b>R</b>eparative <b>M</b>apping</h4>
 <!-- <a href="https://github.com/rpl-cmu/form/blob/master/LICENSE"><img src="https://img.shields.io/github/license/rpl-cmu/form" /></a> -->
-</div>
 
 FORM is a LiDAR Odometry system that performs fixed-lag smoothing over a window of prior poses along with map reparations, all in real-time with minimal parameters.
-
 ![](.github/assets/readme.png)
 
+</div>
 <hr />
 
 ## Building
