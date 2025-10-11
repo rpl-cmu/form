@@ -1,0 +1,95 @@
+\documentclass{article}
+
+% import tikz
+\usepackage{tikz}
+\usetikzlibrary{decorations.pathreplacing, positioning, calc, backgrounds, arrows.meta}
+
+% make the document the exact size of the figure
+\usepackage[active,tightpage]{preview}
+\renewcommand\PreviewBbAdjust{0bp 0bp 0bp 0bp}
+\PreviewEnvironment[]{tikzpicture}
+\usepackage[T1]{fontenc}
+
+% Colors - seaborn colorblind palette
+\definecolor{color0}{HTML}{0173b2} % blue
+\definecolor{color1}{HTML}{de8f05} % orange
+\definecolor{color2}{HTML}{029e73} % green
+\definecolor{color3}{HTML}{d55e00}
+\definecolor{color4}{HTML}{cc78bc}
+\definecolor{color5}{HTML}{ca9161}
+\definecolor{color6}{HTML}{fbafe4}
+\definecolor{color7}{HTML}{949494}
+\definecolor{color8}{HTML}{ece133}
+\definecolor{color9}{HTML}{56b4e9}
+
+\begin{document}
+\begin{tikzpicture}[
+        CIRCLE/.style={circle, draw, very thick, inner sep=0pt},
+        FAC/.style={rectangle, minimum size=1mm, inner sep=0pt, draw, fill},
+        OLD/.style={fill=color7!55, draw=color7!55},
+    ]
+    % Setup all constants
+    \coordinate (zoom) at (-0.6,-0.9);
+    \pgfmathsetlengthmacro{\circleradius}{0.155\columnwidth};
+    \pgfmathsetlengthmacro{\circlediameter}{2.0 * \circleradius};
+
+    % ------------------------- main image ------------------------- %
+    \node[inner sep=1pt] (image) at (0,0) {
+        \includegraphics[width=0.99\columnwidth]{../graphics/readme_big.png}
+    };
+
+    % ------------------------- zoom in ------------------------- %
+    \begin{scope}[shift={(image.south west)}, xshift=130mm, yshift=57mm]
+        \begin{scope}
+            \path[clip] (0,0) circle [x radius=\circleradius, y radius=\circleradius];
+            \node[inner sep=0pt] {
+                \includegraphics[width=\circlediameter]{../graphics/readme_small.png}
+            };
+        \end{scope}
+        \node[CIRCLE, minimum size=\circlediameter] (zoom_big) {};
+    \end{scope}
+
+    \node[circle, draw, thick, minimum size=9mm, inner sep=0pt] (zoom_small) at (zoom) {};
+    \path[draw, thick] (zoom_big.north west) -- (zoom_small.north west);
+    \path[draw, thick] (zoom_big.south) -- (zoom_small.south);
+
+
+    % ------------------------- Factor graph ------------------------- %
+    \node[CIRCLE, minimum size=\circlediameter, fill=white] (graph) [below=2mm of zoom_big] {};
+
+    \begin{scope}[node distance=2mm]
+        \node[CIRCLE, thin, minimum size=5mm, draw=none, text=white, fill=color0!80] (x_0) at (graph) [xshift=-15mm] {\(X\)};
+        \node[CIRCLE, thin, minimum size=5mm, draw=none, text=white, fill=color1!80] (x_1) [right=of x_0] {\(X\)};
+        \node[CIRCLE, thin, minimum size=5mm, draw=none, text=white, fill=color2!80] (x_2) [right=of x_1] {\(X\)};
+
+        \node (dots)   [right=of x_2]    {\(\cdots\)};
+        \node[CIRCLE, thin, minimum size=5mm, draw=none, text=white, fill=black] (x_3) [right=of dots] {\(X\)};
+    \end{scope}
+
+    % Marg Factor
+    \node[FAC] (marg) [below=7mm of x_2] {};
+    \draw (x_0) -- (marg);
+    \draw (x_1) -- (marg);
+    \draw (x_2) -- (marg);
+    \draw (dots) -- (marg);
+
+    % Random connections
+    \path[OLD] (x_0) edge[bend left = 55] node[FAC, OLD, pos=0.5] {} (x_1);
+    \path[OLD] (x_0) edge[bend left = 55] node[FAC, OLD, pos=0.5] {} (x_2);
+    \path[OLD] (x_0) edge[bend left = 55] node[FAC, OLD, pos=0.5] {} (dots);
+    \path[OLD] (x_1) edge[bend left = 55] node[FAC, OLD, pos=0.5] {} (x_2);
+    \path[OLD] (x_1) edge[bend left = 55] node[FAC, OLD, pos=0.5] {} (dots);
+    \path[OLD] (x_2) edge[bend left = 55] node[FAC, OLD, pos=0.5] {} (dots);
+
+    % Most recent connections
+    \path (x_0) edge[bend left=65] node[FAC, pos=0.35] {} (x_3);
+    \path (x_1) edge[bend left=65] node[FAC, pos=0.35] {} (x_3);
+    \path (x_2) edge[bend left=65] node[FAC, pos=0.35] {} (x_3);
+    \path (dots) edge[bend left=65] node[FAC, pos=0.35] {} (x_3);
+
+
+    % arrow between circles
+    \path[->, -{Latex[length=3mm]}, ultra thick] (zoom_big.south east) edge[bend right=-45] (graph.north east);
+
+\end{tikzpicture}
+\end{document}
