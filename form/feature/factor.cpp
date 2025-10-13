@@ -1,3 +1,24 @@
+// MIT License
+
+// Copyright (c) 2025 Easton Potokar, Taylor Pool, and Michael Kaess
+
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
 #include "form/feature/factor.hpp"
 #include "form/optimization/gtsam.hpp"
 #include <Eigen/src/Core/Matrix.h>
@@ -119,14 +140,14 @@ FeatureFactor::FeatureFactor(
           FastIsotropic::Sigma(sigma, std::get<0>(constraints)->num_residuals() +
                                           std::get<1>(constraints)->num_residuals()),
           i, j),
-      plane_plane(std::get<0>(constraints)), point_point(std::get<1>(constraints)) {}
+      plane_point(std::get<0>(constraints)), point_point(std::get<1>(constraints)) {}
 
 [[nodiscard]] gtsam::Vector
 FeatureFactor::evaluateError(const gtsam::Pose3 &Ti, const gtsam::Pose3 &Tj,
                              boost::optional<gtsam::Matrix &> H1,
                              boost::optional<gtsam::Matrix &> H2) const noexcept {
 
-  size_t size = plane_plane->num_residuals() + point_point->num_residuals();
+  size_t size = plane_point->num_residuals() + point_point->num_residuals();
   gtsam::Vector residual(size);
 
   if (H1) {
@@ -137,11 +158,11 @@ FeatureFactor::evaluateError(const gtsam::Pose3 &Ti, const gtsam::Pose3 &Tj,
   }
 
   // Plane-Plane constraints
-  size_t start = 0, end = plane_plane->num_residuals();
-  if (plane_plane->num_residuals() > 0) {
+  size_t start = 0, end = plane_point->num_residuals();
+  if (plane_point->num_residuals() > 0) {
     Eigen::MatrixXd H1_temp, H2_temp;
     residual.segment(start, end - start) =
-        plane_plane->evaluateError(Ti, Tj, H1 ? &H1_temp : 0, H2 ? &H2_temp : 0);
+        plane_point->evaluateError(Ti, Tj, H1 ? &H1_temp : 0, H2 ? &H2_temp : 0);
     if (H1) {
       H1->block(start, 0, end - start, 6) = H1_temp;
     }

@@ -1,3 +1,24 @@
+// MIT License
+
+// Copyright (c) 2025 Easton Potokar, Taylor Pool, and Michael Kaess
+
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
 #pragma once
 
 #include "form/feature/factor.hpp"
@@ -22,11 +43,14 @@ namespace form {
 
 using FrameIndex = size_t;
 
+/// @brief Manages all the constraints between poses
+///
+/// Internally holds all the factors, values, and optimization routines for
+/// estimation
 class ConstraintManager {
-
 public:
-  using Factor = FeatureFactor;
-
+  /// @brief Parameters for the constraint manager
+  /// Rarely changed, defaults should be fine
   struct Params {
     // Used for ablations, optimize a single pose at a time
     bool disable_smoothing = false;
@@ -46,67 +70,99 @@ public:
   };
 
 private:
+  /// @brief Parameters
   Params m_params;
 
-  // ------------------------- Data ------------------------- //
-  // Current estimates
+  /// @brief Current estimates
   gtsam::Values m_values;
 
-  // Current frame index
+  /// @brief Current frame index
   FrameIndex m_frame = 0;
 
-  // all that factors that aren't planar factors & empty slots in that graph
+  /// @brief All that factors that aren't planar factors
   gtsam::NonlinearFactorGraph m_other_factors;
+
+  /// @brief Empty slots in m_other_factors
   std::vector<size_t> m_empty_slots;
 
-  // Linearization of previous matches & m_other_factors for fast optimization
+  /// @brief Linearization of previous matches & m_other_factors
   std::optional<gtsam::LinearContainerFactor> m_fast_linear = std::nullopt;
 
-  // Scan j -- scan i -- Constraints
-  // Note that j > i
-  // These have to be modified when we rematch.
   using ConstraintMap =
       tsl::robin_map<FrameIndex, std::tuple<PlanePoint::Ptr, PointPoint::Ptr>>;
   using ConstraintMapMap = tsl::robin_map<FrameIndex, ConstraintMap>;
+
+  /// @brief All the planar and point constraints between frames
+  ///
+  /// m_constraints[j][i] = (plane_point_factor, point_point_factor)
+  /// where j > i
   ConstraintMapMap m_constraints;
 
 public:
+  /// @brief Default constructor
   ConstraintManager() : m_params() {}
+
+  /// @brief Constructor with custom parameters
   ConstraintManager(const Params &params) : m_params(params) {}
 
   // ------------------------- Doers ------------------------- //
 
-  // Get all the constraints for a given frame going backward
-  // If they don't exist, a new one will be created
+  /// @brief Get all the constraints for a given frame going backward
+  /// If they don't exist, a new one will be created
   ConstraintMap &get_constraints(const FrameIndex &frame_j) noexcept;
+
+  /// @brief Get all the constraints for the current frame going backward
   ConstraintMap &get_current_constraints() noexcept;
 
+  /// @brief Predict the next pose based on constant velocity assumption
   gtsam::Pose3 predict_next() const noexcept;
 
-  // Optimize over the existing constraints, but don't save results
-  // fast => linearize previous matches
+  /// @brief Optimize over the existing constraints, but don't save results
+  /// fast => linearize previous matches
   gtsam::Values optimize(bool fast = false) noexcept;
 
-  // Marginalize out a specific frame
+  /// @brief Marginalize out the given scans
   void marginalize(const std::vector<FrameIndex> &frames) noexcept;
 
-  // Add a new pose to the graph
-  std::tuple<size_t, ConstraintMap &>
-  add_next_pose(const gtsam::Pose3 &pose) noexcept;
+  /// @brief Add in the next pose and increment everything internally
+  ///
+  /// Returns the current frame index and an reference to it's empty constraint map
+  std::tuple<size_t, ConstraintMap &> step(const gtsam::Pose3 &pose) noexcept;
 
   // ------------------------- Setters ------------------------- //
-  // Update an existing pose or values
+  /// @brief Update the internal values with new estimates
   void update_values(const gtsam::Values &values) noexcept;
+
+  /// @brief Update the pose for a given frame
   void update_pose(const FrameIndex &frame, const gtsam::Pose3 &pose) noexcept;
+
+  /// @brief Update the pose for the current frame
   void update_current_pose(const gtsam::Pose3 &pose) noexcept;
 
   // ------------------------- Getters ------------------------- //
+  /// @brief If the constraint manager has been initialized with at least one pose
+  /// aka if step() has been called at least once
   bool initialized() const noexcept { return m_values.size() > 0; }
+
+  /// @brief Get the full factor graph
+  /// fast => linearize previous matches
   gtsam::NonlinearFactorGraph get_graph(bool fast) noexcept;
+
+  /// @brief Get a factor graph with only current frame as a variable.
+  /// Used for ablations
   gtsam::NonlinearFactorGraph get_single_graph() noexcept;
+
+  /// @brief Get a pose for a given frame
   const gtsam::Pose3 get_pose(const FrameIndex &frame) const noexcept;
+
+  /// @brief Get the pose for the current frame
   const gtsam::Pose3 get_current_pose() const noexcept;
+
+  /// @brief Get all the current state estimates
   const gtsam::Values &get_values() const noexcept { return m_values; }
+
+  /// @brief Get the number of connections of frame to all frames newer than or equal
+  /// to oldest
   const size_t num_recent_connections(const FrameIndex &frame,
                                       const FrameIndex &oldest) const noexcept;
 };

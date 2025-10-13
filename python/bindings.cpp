@@ -82,7 +82,7 @@ public:
     (int,     max_num_recent_frames,  10, params_.scans.max_num_recent_frames),
     (int, max_steps_unused_keyframe,  10, params_.scans.max_steps_unused_keyframe),
     (double,    keyscan_match_ratio, 0.1, params_.scans.keyscan_match_ratio),
-    (double,           max_dist_map, 0.1, params_.map.max_dist_map),
+    (double,           max_dist_map, 0.1, params_.map.min_dist_map),
     // misc
     (int, num_threads, 0, params_.num_threads)
   );
@@ -97,7 +97,7 @@ public:
     const auto world_map =
         form::tuple::transform(estimator_.m_keypoint_map, [&](auto &map) {
           return map.to_voxel_map(estimator_.m_constraints.get_values(),
-                                  estimator_.m_params.map.max_dist_map);
+                                  estimator_.m_params.map.min_dist_map);
         });
 
     std::tuple<std::string, std::string> map_names = {"planar", "point"};

@@ -1,3 +1,24 @@
+// MIT License
+
+// Copyright (c) 2025 Easton Potokar, Taylor Pool, and Michael Kaess
+
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
 #include "form/form.hpp"
 #include "form/utils.hpp"
 
@@ -26,7 +47,7 @@ Estimator::register_scan(const std::vector<Eigen::Vector3f> &scan) noexcept {
   // ------------------------------ Initialization ------------------------------ //
   // This needs to go first to get the frame index
   Pose3 prediction = m_constraints.predict_next();
-  auto [frame_idx, scan_constraints] = m_constraints.add_next_pose(prediction);
+  auto [frame_idx, scan_constraints] = m_constraints.step(prediction);
 
   // ----------------------------- Extract Features ----------------------------- //
   const auto keypoints = m_extractor.extract(scan, frame_idx);
@@ -82,7 +103,7 @@ Estimator::register_scan(const std::vector<Eigen::Vector3f> &scan) noexcept {
   const auto connections = [&](FrameIndex frame) {
     return m_constraints.num_recent_connections(frame, m_keyscanner.oldest_rf());
   };
-  auto marg_frames = m_keyscanner.update(frame_idx, num_keypoints, connections);
+  auto marg_frames = m_keyscanner.step(frame_idx, num_keypoints, connections);
 
   // ----------------------------- Marginalization ----------------------------- //
   m_constraints.marginalize(marg_frames);

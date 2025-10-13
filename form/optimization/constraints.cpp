@@ -1,3 +1,24 @@
+// MIT License
+
+// Copyright (c) 2025 Easton Potokar, Taylor Pool, and Michael Kaess
+
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
 #include "form/optimization/constraints.hpp"
 #include <gtsam/linear/GaussianFactorGraph.h>
 #include <gtsam/linear/HessianFactor.h>
@@ -133,8 +154,8 @@ void ConstraintManager::marginalize(const std::vector<FrameIndex> &frames) noexc
         continue;
 
       if (is_marg_frame(i) || is_marg_frame(j)) {
-        dropped_factors.push_back(Factor(X(i), pose_j_key, planar_constraints,
-                                         m_params.planar_constraint_sigma));
+        dropped_factors.push_back(FeatureFactor(X(i), pose_j_key, planar_constraints,
+                                                m_params.planar_constraint_sigma));
       }
     }
   }
@@ -183,7 +204,7 @@ void ConstraintManager::update_values(const gtsam::Values &values) noexcept {
 }
 
 std::tuple<size_t, ConstraintManager::ConstraintMap &>
-ConstraintManager::add_next_pose(const gtsam::Pose3 &pose) noexcept {
+ConstraintManager::step(const gtsam::Pose3 &pose) noexcept {
   // Only increment the frame if we've already initialized
   // Skips incrementing for the first frame
   if (initialized()) {
@@ -219,8 +240,8 @@ gtsam::NonlinearFactorGraph ConstraintManager::get_single_graph() noexcept {
     if (is_empty(planar_constraints))
       continue;
 
-    auto factor = Factor(X(i), X(m_frame), planar_constraints,
-                         m_params.planar_constraint_sigma);
+    auto factor = FeatureFactor(X(i), X(m_frame), planar_constraints,
+                                m_params.planar_constraint_sigma);
     auto binary_factor =
         BinaryFactorWrapper::Create(get_pose(i), X(m_frame), factor);
     graph.push_back(binary_factor);
@@ -240,8 +261,8 @@ gtsam::NonlinearFactorGraph ConstraintManager::get_graph(bool fast) noexcept {
       if (is_empty(planar_constraints))
         continue;
 
-      graph.push_back(Factor(X(i), X(m_frame), planar_constraints,
-                             m_params.planar_constraint_sigma));
+      graph.push_back(FeatureFactor(X(i), X(m_frame), planar_constraints,
+                                    m_params.planar_constraint_sigma));
     }
 
     // If we don't have the linear factor, compute it
@@ -255,8 +276,9 @@ gtsam::NonlinearFactorGraph ConstraintManager::get_graph(bool fast) noexcept {
         for (const auto &[i, planar_constraints] : scan_constraints) {
           if (is_empty(planar_constraints))
             continue;
-          previous_matches.push_back(Factor(X(i), pose_j_key, planar_constraints,
-                                            m_params.planar_constraint_sigma));
+          previous_matches.push_back(
+              FeatureFactor(X(i), pose_j_key, planar_constraints,
+                            m_params.planar_constraint_sigma));
         }
       }
       // Don't use linearizeToHessianFactor, as it linearizes sequentially.
@@ -277,8 +299,8 @@ gtsam::NonlinearFactorGraph ConstraintManager::get_graph(bool fast) noexcept {
       for (const auto &[i, planar_constraints] : scan_constraints) {
         if (is_empty(planar_constraints))
           continue;
-        graph.push_back(Factor(X(i), pose_j_key, planar_constraints,
-                               m_params.planar_constraint_sigma));
+        graph.push_back(FeatureFactor(X(i), pose_j_key, planar_constraints,
+                                      m_params.planar_constraint_sigma));
       }
     }
   }
