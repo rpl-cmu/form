@@ -41,7 +41,7 @@
 
 namespace form {
 
-using FrameIndex = size_t;
+using ScanIndex = size_t;
 
 /// @brief Manages all the constraints between poses
 ///
@@ -76,8 +76,8 @@ private:
   /// @brief Current estimates
   gtsam::Values m_values;
 
-  /// @brief Current frame index
-  FrameIndex m_frame = 0;
+  /// @brief Current scan index
+  ScanIndex m_scan = 0;
 
   /// @brief All that factors that aren't planar factors
   gtsam::NonlinearFactorGraph m_other_factors;
@@ -89,10 +89,10 @@ private:
   std::optional<gtsam::LinearContainerFactor> m_fast_linear = std::nullopt;
 
   using ConstraintMap =
-      tsl::robin_map<FrameIndex, std::tuple<PlanePoint::Ptr, PointPoint::Ptr>>;
-  using ConstraintMapMap = tsl::robin_map<FrameIndex, ConstraintMap>;
+      tsl::robin_map<ScanIndex, std::tuple<PlanePoint::Ptr, PointPoint::Ptr>>;
+  using ConstraintMapMap = tsl::robin_map<ScanIndex, ConstraintMap>;
 
-  /// @brief All the planar and point constraints between frames
+  /// @brief All the planar and point constraints between scans
   ///
   /// m_constraints[j][i] = (plane_point_factor, point_point_factor)
   /// where j > i
@@ -107,11 +107,11 @@ public:
 
   // ------------------------- Doers ------------------------- //
 
-  /// @brief Get all the constraints for a given frame going backward
+  /// @brief Get all the constraints for a given scan going backward
   /// If they don't exist, a new one will be created
-  ConstraintMap &get_constraints(const FrameIndex &frame_j) noexcept;
+  ConstraintMap &get_constraints(const ScanIndex &scan_j) noexcept;
 
-  /// @brief Get all the constraints for the current frame going backward
+  /// @brief Get all the constraints for the current scan going backward
   ConstraintMap &get_current_constraints() noexcept;
 
   /// @brief Predict the next pose based on constant velocity assumption
@@ -122,21 +122,21 @@ public:
   gtsam::Values optimize(bool fast = false) noexcept;
 
   /// @brief Marginalize out the given scans
-  void marginalize(const std::vector<FrameIndex> &frames) noexcept;
+  void marginalize(const std::vector<ScanIndex> &scans) noexcept;
 
   /// @brief Add in the next pose and increment everything internally
   ///
-  /// Returns the current frame index and an reference to it's empty constraint map
+  /// Returns the current scan index and an reference to it's empty constraint map
   std::tuple<size_t, ConstraintMap &> step(const gtsam::Pose3 &pose) noexcept;
 
   // ------------------------- Setters ------------------------- //
   /// @brief Update the internal values with new estimates
   void update_values(const gtsam::Values &values) noexcept;
 
-  /// @brief Update the pose for a given frame
-  void update_pose(const FrameIndex &frame, const gtsam::Pose3 &pose) noexcept;
+  /// @brief Update the pose for a given scan
+  void update_pose(const ScanIndex &scan, const gtsam::Pose3 &pose) noexcept;
 
-  /// @brief Update the pose for the current frame
+  /// @brief Update the pose for the current scan
   void update_current_pose(const gtsam::Pose3 &pose) noexcept;
 
   // ------------------------- Getters ------------------------- //
@@ -148,23 +148,23 @@ public:
   /// fast => linearize previous matches
   gtsam::NonlinearFactorGraph get_graph(bool fast) noexcept;
 
-  /// @brief Get a factor graph with only current frame as a variable.
+  /// @brief Get a factor graph with only current scan as a variable.
   /// Used for ablations
   gtsam::NonlinearFactorGraph get_single_graph() noexcept;
 
-  /// @brief Get a pose for a given frame
-  const gtsam::Pose3 get_pose(const FrameIndex &frame) const noexcept;
+  /// @brief Get a pose for a given scan
+  const gtsam::Pose3 get_pose(const ScanIndex &scan) const noexcept;
 
-  /// @brief Get the pose for the current frame
+  /// @brief Get the pose for the current scan
   const gtsam::Pose3 get_current_pose() const noexcept;
 
   /// @brief Get all the current state estimates
   const gtsam::Values &get_values() const noexcept { return m_values; }
 
-  /// @brief Get the number of connections of frame to all frames newer than or equal
+  /// @brief Get the number of connections of scan to all scans newer than or equal
   /// to oldest
-  const size_t num_recent_connections(const FrameIndex &frame,
-                                      const FrameIndex &oldest) const noexcept;
+  const size_t num_recent_connections(const ScanIndex &scan,
+                                      const ScanIndex &oldest) const noexcept;
 };
 
 } // namespace form

@@ -27,18 +27,18 @@
 
 namespace form {
 
-using FrameIndex = size_t;
+using ScanIndex = size_t;
 
 /// @brief Scan representation
 struct Scan {
-  /// @brief Index of the frame
+  /// @brief Index of the scan
   size_t idx;
 
-  /// @brief Number of times the frame has gone unconnected to recent frames
-  /// (only used if scan becomes a keyframe)
+  /// @brief Number of times the scan has gone unconnected to recent scans
+  /// (only used if scan becomes a keyscan)
   size_t unused_count = 0;
 
-  /// @brief Size of the frame (number of features)
+  /// @brief Size of the scan (number of features)
   size_t size = 0;
 
   /// @brief Constructor
@@ -47,18 +47,18 @@ struct Scan {
 
 /// @brief Keyscan manager
 ///
-/// Maintains a set of recent frames and keyframes, adding/removing them based on
-/// connectivity to recent frames
+/// Maintains a set of recent scans and keyscans, adding/removing them based on
+/// connectivity to recent scans
 class KeyScanner {
 public:
   /// @brief Parameters for the keyscanner
   struct Params {
-    /// @brief Maximum number of keyframes to keep
-    int64_t max_num_keyframes = 50;
-    /// @brief Maximum number of steps a keyframe can go unused before being removed
-    int64_t max_steps_unused_keyframe = 10;
-    /// @brief Maximum number of recent frames to keep
-    size_t max_num_recent_frames = 10;
+    /// @brief Maximum number of keyscans to keep
+    int64_t max_num_keyscans = 50;
+    /// @brief Maximum number of steps a keyscan can go unused before being removed
+    int64_t max_steps_unused_keyscan = 10;
+    /// @brief Maximum number of recent scans to keep
+    size_t max_num_recent_scans = 10;
     /// @brief Keyscan matching ratio
     double keyscan_match_ratio = 0.1;
   };
@@ -67,11 +67,11 @@ private:
   /// @brief Parameters
   Params m_params;
 
-  /// @brief Recent frames
-  std::deque<Scan> m_recent_frames;
+  /// @brief Recent scans
+  std::deque<Scan> m_recent_scans;
 
-  /// @brief Key frames
-  std::deque<Scan> m_keyframes;
+  /// @brief Key scans
+  std::deque<Scan> m_keyscans;
 
 public:
   /// @brief Default constructor
@@ -81,36 +81,35 @@ public:
   KeyScanner(const Params &params) : m_params(params) {}
 
   // ------------------------- Doers ------------------------- //
-  /// @brief Update the keyscanner with a new frame.
+  /// @brief Update the keyscanner with a new scan.
   ///
-  /// Will perform all the transitions from recent frame to keyframe and
+  /// Will perform all the transitions from recent scan to keyscan and
   /// marginalization checks.
   ///
-  /// @param idx Index of the new frame
-  /// @param size Size of the new frame (number of features)
-  /// @param connections Function that returns the number of connections a frame
-  /// has to recent frames
-  /// @return Vector of frame indices that need to be marginalized out
-  std::vector<FrameIndex>
-  step(FrameIndex idx, size_t size,
-       std::function<size_t(FrameIndex)> connections) noexcept;
+  /// @param idx Index of the new scan
+  /// @param size Size of the new scan (number of features)
+  /// @param connections Function that returns the number of connections a scan
+  /// has to recent scans
+  /// @return Vector of scan indices that need to be marginalized out
+  std::vector<ScanIndex> step(ScanIndex idx, size_t size,
+                              std::function<size_t(ScanIndex)> connections) noexcept;
 
   // ------------------------- Getters ------------------------- //
-  /// @brief Get the number of frames being tracked
+  /// @brief Get the number of scans being tracked
   const size_t size() const noexcept {
-    return m_keyframes.size() + m_recent_frames.size();
+    return m_keyscans.size() + m_recent_scans.size();
   }
-  /// @brief Get newest recent frame index
-  const size_t newest_rf() const noexcept { return m_recent_frames.back().idx; }
+  /// @brief Get newest recent scan index
+  const size_t newest_rf() const noexcept { return m_recent_scans.back().idx; }
 
-  /// @brief Get oldest recent frame index
-  const size_t oldest_rf() const noexcept { return m_recent_frames.front().idx; }
+  /// @brief Get oldest recent scan index
+  const size_t oldest_rf() const noexcept { return m_recent_scans.front().idx; }
 
-  /// @brief Get newest keyframe index
-  const size_t newest_kf() const noexcept { return m_keyframes.back().idx; }
+  /// @brief Get newest keyscan index
+  const size_t newest_kf() const noexcept { return m_keyscans.back().idx; }
 
-  /// @brief Get oldest keyframe index
-  const size_t oldest_kf() const noexcept { return m_keyframes.front().idx; }
+  /// @brief Get oldest keyscan index
+  const size_t oldest_kf() const noexcept { return m_keyscans.front().idx; }
 };
 
 } // namespace form

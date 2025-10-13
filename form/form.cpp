@@ -45,12 +45,12 @@ Estimator::register_scan(const std::vector<Eigen::Vector3f> &scan) noexcept {
   // ############################ Feature Extraction ############################ //
   //
   // ------------------------------ Initialization ------------------------------ //
-  // This needs to go first to get the frame index
+  // This needs to go first to get the scan index
   Pose3 prediction = m_constraints.predict_next();
-  auto [frame_idx, scan_constraints] = m_constraints.step(prediction);
+  auto [scan_idx, scan_constraints] = m_constraints.step(prediction);
 
   // ----------------------------- Extract Features ----------------------------- //
-  const auto keypoints = m_extractor.extract(scan, frame_idx);
+  const auto keypoints = m_extractor.extract(scan, scan_idx);
   const auto num_keypoints =
       std::apply([](auto &...kps) { return (kps.size() + ...); }, keypoints);
 
@@ -80,7 +80,7 @@ Estimator::register_scan(const std::vector<Eigen::Vector3f> &scan) noexcept {
 
     // ---------------------- Semi-Linearized Optimization ---------------------- //
     new_values = m_constraints.optimize(true);
-    const auto after = new_values.at<Pose3>(X(frame_idx));
+    const auto after = new_values.at<Pose3>(X(scan_idx));
     const auto diff = before.localCoordinates(after).norm();
     if (diff < m_params.matcher.new_pose_threshold) {
       break;
@@ -101,14 +101,14 @@ Estimator::register_scan(const std::vector<Eigen::Vector3f> &scan) noexcept {
   });
 
   // ---------------------------- Keyscan Selection ---------------------------- //
-  const auto connections = [&](FrameIndex frame) {
-    return m_constraints.num_recent_connections(frame, m_keyscanner.oldest_rf());
+  const auto connections = [&](ScanIndex i) {
+    return m_constraints.num_recent_connections(i, m_keyscanner.oldest_rf());
   };
-  auto marg_frames = m_keyscanner.step(frame_idx, num_keypoints, connections);
+  auto marg_scans = m_keyscanner.step(scan_idx, num_keypoints, connections);
 
   // ----------------------------- Marginalization ----------------------------- //
-  m_constraints.marginalize(marg_frames);
-  tuple::for_each(m_keypoint_map, [&](auto &map) { map.remove(marg_frames); });
+  m_constraints.marginalize(marg_scans);
+  tuple::for_each(m_keypoint_map, [&](auto &map) { map.remove(marg_scans); });
 
   return keypoints;
 }

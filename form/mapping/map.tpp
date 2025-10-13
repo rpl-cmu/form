@@ -96,32 +96,32 @@ KeypointMap<Point>::KeypointMap(const KeypointMapParams &params) noexcept
     : m_params(params) {}
 
 template <typename Point>
-std::vector<Point> &KeypointMap<Point>::get(const FrameIndex &frame_j) noexcept {
+std::vector<Point> &KeypointMap<Point>::get(const ScanIndex &scan_j) noexcept {
   // Check if it already exists
-  auto search = m_frame_keypoints.find(frame_j);
-  if (search != m_frame_keypoints.end()) {
+  auto search = m_scan_keypoints.find(scan_j);
+  if (search != m_scan_keypoints.end()) {
     return search.value();
   }
   // If not, make it and return it
   else {
-    m_frame_keypoints.insert(std::make_pair(frame_j, std::vector<Point>()));
-    return m_frame_keypoints.at(frame_j);
+    m_scan_keypoints.insert(std::make_pair(scan_j, std::vector<Point>()));
+    return m_scan_keypoints.at(scan_j);
   }
 }
 
 template <typename Point>
-void KeypointMap<Point>::remove(const FrameIndex &frame_j) noexcept {
-  auto search = m_frame_keypoints.find(frame_j);
-  if (search != m_frame_keypoints.end()) {
-    m_frame_keypoints.erase(search);
+void KeypointMap<Point>::remove(const ScanIndex &scan_j) noexcept {
+  auto search = m_scan_keypoints.find(scan_j);
+  if (search != m_scan_keypoints.end()) {
+    m_scan_keypoints.erase(search);
   }
 }
 
 template <typename Point>
 template <typename Iter>
 void KeypointMap<Point>::remove(const Iter &iter) noexcept {
-  for (const auto &frame : iter) {
-    remove(frame);
+  for (const auto &scan : iter) {
+    remove(scan);
   }
 }
 
@@ -132,13 +132,13 @@ VoxelMap<Point> KeypointMap<Point>::to_voxel_map(const gtsam::Values &values,
   VoxelMap<Point> world_map(voxel_width);
 
   // Iterate over all the keypoints in the map
-  for (const auto &[frame_index, keypoints] : m_frame_keypoints) {
-    // Get the pose of the frame
-    const auto &world_T_frame = values.at<gtsam::Pose3>(X(frame_index));
+  for (const auto &[scan_index, keypoints] : m_scan_keypoints) {
+    // Get the pose of the scan
+    const auto &world_T_scan = values.at<gtsam::Pose3>(X(scan_index));
 
-    // Transform each keypoint into the world frame and add it to the map
+    // Transform each keypoint into the world scan and add it to the map
     for (const auto &keypoint : keypoints) {
-      world_map.push_back(keypoint.transform(world_T_frame));
+      world_map.push_back(keypoint.transform(world_T_scan));
     }
   }
 
@@ -148,12 +148,12 @@ VoxelMap<Point> KeypointMap<Point>::to_voxel_map(const gtsam::Values &values,
 template <typename Point>
 void KeypointMap<Point>::insert_matches(
     const tbb::concurrent_vector<Match<Point>> &matches) {
-  // Infer the frame
+  // Infer the scan
   if (matches.empty()) {
     return;
   }
-  const FrameIndex frame_j = matches.front().query.scan;
-  auto &keypoints = get(frame_j);
+  const ScanIndex scan_j = matches.front().query.scan;
+  auto &keypoints = get(scan_j);
 
   double max_dist_map_sqrd = m_params.min_dist_map * m_params.min_dist_map;
 

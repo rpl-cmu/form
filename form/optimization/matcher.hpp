@@ -37,7 +37,7 @@ struct MatcherParams {
   double new_pose_threshold = 1e-4;
 
   /// @brief Maximum number of ICP rematches to perform
-  size_t max_num_rematches = 10;
+  size_t max_num_rematches = 30;
 };
 
 /// @brief Class for matching keypoints to a map
@@ -61,8 +61,8 @@ public:
   /// @tparam I Index of the constraint type (0 for PlanePoint, 1 for PointPoint)
   /// @param map The voxel map to match against
   /// @param keypoints The keypoints to match
-  /// @param estimates Function that returns the pose estimate for a given FrameIndex
-  /// @param scan_constraints Map from FrameIndex to a tuple of constraint vectors
+  /// @param estimates Function that returns the pose estimate for a given ScanIndex
+  /// @param scan_constraints Map from ScanIndex to a tuple of constraint vectors
   /// where the matched constraints will be added
   template <int I>
   void match(const VoxelMap<Point> &map, const std::vector<Point> &keypoints,

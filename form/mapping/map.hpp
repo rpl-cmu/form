@@ -99,21 +99,21 @@ struct KeypointMapParams {
   double min_dist_map = 0.1;
 };
 
-/// @brief A map of keypoints for each frame
+/// @brief A map of keypoints for each scan
 ///
-/// Stores a mapping from frame index to a vector of keypoints
+/// Stores a mapping from scan index to a vector of keypoints
 /// All keypoints are stored in their local frames
 /// When matching is needed, the keypoints can be transformed to the global
-/// frame into a voxel map using the current pose estimates.
+/// scan into a voxel map using the current pose estimates.
 template <typename Point> class KeypointMap {
-  using FrameIndex = size_t;
+  using ScanIndex = size_t;
 
 private:
   /// @brief Parameters
   KeypointMapParams m_params;
 
-  /// @brief The data structure storing the keypoints for each frame
-  tsl::robin_map<FrameIndex, std::vector<Point>> m_frame_keypoints;
+  /// @brief The data structure storing the keypoints for each scan
+  tsl::robin_map<ScanIndex, std::vector<Point>> m_scan_keypoints;
 
 public:
   /// @brief Default constructor
@@ -122,17 +122,17 @@ public:
   /// @brief Constructor with parameters
   KeypointMap(const KeypointMapParams &params) noexcept;
 
-  /// @brief Get a reference keypoints for a given frame, adding it in if it doesn't
+  /// @brief Get a reference keypoints for a given scan, adding it in if it doesn't
   /// exist yet
-  std::vector<Point> &get(const FrameIndex &frame_j) noexcept;
+  std::vector<Point> &get(const ScanIndex &scan_j) noexcept;
 
-  /// @brief Remove the keypoints for a given frame, if they exist
-  void remove(const FrameIndex &frame_j) noexcept;
+  /// @brief Remove the keypoints for a given scan, if they exist
+  void remove(const ScanIndex &scan_j) noexcept;
 
-  /// @brief Remove the keypoints for a list of frames, if they exist
+  /// @brief Remove the keypoints for a list of scans, if they exist
   template <typename Iter> void remove(const Iter &iter) noexcept;
 
-  /// @brief Transform all keypoints to the global frame and insert them into a
+  /// @brief Transform all keypoints to the global scan and insert them into a
   /// voxel map
   VoxelMap<Point> to_voxel_map(const gtsam::Values &values,
                                double voxel_width) const noexcept;

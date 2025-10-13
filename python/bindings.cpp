@@ -67,20 +67,20 @@ public:
     // FEATURE EXTRACTION
     (int,         neighbor_points,   5, params_.extraction.neighbor_points),
     (int,             num_sectors,   6, params_.extraction.num_sectors),
+    (double,     planar_threshold, 1.0, params_.extraction.planar_threshold),
     (int, planar_feats_per_sector,  50, params_.extraction.planar_feats_per_sector),
     (int,  point_feats_per_sector,   3, params_.extraction.point_feats_per_sector),
-    (double,     planar_threshold, 1.0, params_.extraction.planar_threshold),
     (double,               radius, 1.0, params_.extraction.radius),
     (int,              min_points,   5, params_.extraction.min_points),
     // OPTIMIZATION
+    (double,  max_dist_matching,   0.8, params_.matcher.max_dist_matching),
     (double, new_pose_threshold,  1e-4, params_.matcher.new_pose_threshold),
     (int,     max_num_rematches,    30, params_.matcher.max_num_rematches),
-    (double,  max_dist_matching,   0.8, params_.matcher.max_dist_matching),
     (bool,    disable_smoothing, false, params_.constraints.disable_smoothing),
     // MAPPING
-    (int,         max_num_keyframes,  50, params_.scans.max_num_keyframes),
-    (int,     max_num_recent_frames,  10, params_.scans.max_num_recent_frames),
-    (int, max_steps_unused_keyframe,  10, params_.scans.max_steps_unused_keyframe),
+    (int,         max_num_keyscans,  50, params_.scans.max_num_keyscans),
+    (int,     max_num_recent_scans,  10, params_.scans.max_num_recent_scans),
+    (int, max_steps_unused_keyscan,  10, params_.scans.max_steps_unused_keyscan),
     (double,    keyscan_match_ratio, 0.1, params_.scans.keyscan_match_ratio),
     (double,           max_dist_map, 0.1, params_.map.min_dist_map),
     // misc

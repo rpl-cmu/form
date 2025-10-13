@@ -26,28 +26,28 @@
 namespace form {
 
 // ------------------------- Doers ------------------------- //
-std::vector<FrameIndex>
-KeyScanner::step(FrameIndex idx, size_t size,
-                 std::function<size_t(FrameIndex)> connections) noexcept {
+std::vector<ScanIndex>
+KeyScanner::step(ScanIndex idx, size_t size,
+                 std::function<size_t(ScanIndex)> connections) noexcept {
   if (idx == 0) {
-    m_keyframes.push_back(Scan(idx, size));
+    m_keyscans.push_back(Scan(idx, size));
   } else {
-    m_recent_frames.push_back(Scan(idx, size));
+    m_recent_scans.push_back(Scan(idx, size));
   }
 
-  std::vector<FrameIndex> marg_results;
+  std::vector<ScanIndex> marg_results;
 
-  // First we handle recent frames
-  if (m_recent_frames.size() > m_params.max_num_recent_frames) {
-    const auto rf = m_recent_frames.front();
-    m_recent_frames.pop_front();
+  // First we handle recent scans
+  if (m_recent_scans.size() > m_params.max_num_recent_scans) {
+    const auto rf = m_recent_scans.front();
+    m_recent_scans.pop_front();
 
-    // If it's a keyframe, add it to the keyframe indices
+    // If it's a keyscan, add it to the keyscan indices
     auto ratio = static_cast<double>(connections(rf.idx)) /
-                 (static_cast<double>(rf.size * m_recent_frames.size()));
+                 (static_cast<double>(rf.size * m_recent_scans.size()));
 
     if (ratio > m_params.keyscan_match_ratio) {
-      m_keyframes.push_back(rf);
+      m_keyscans.push_back(rf);
     }
     // If not, we marginalize it out
     else {
@@ -55,35 +55,35 @@ KeyScanner::step(FrameIndex idx, size_t size,
     }
   }
 
-  std::set<FrameIndex> finished_keyframes;
-  for (auto &kf : m_keyframes) {
-    // If this keyframe is connected to a recent frame, we don't marginalize it
+  std::set<ScanIndex> finished_keyscans;
+  for (auto &kf : m_keyscans) {
+    // If this keyscan is connected to a recent scan, we don't marginalize it
     if (connections(kf.idx) > 0) {
       kf.unused_count = 0;
     } else {
       ++kf.unused_count;
     }
 
-    // If this keyframe has been unused for too long, we marginalize it out
-    if (kf.unused_count > m_params.max_steps_unused_keyframe) {
+    // If this keyscan has been unused for too long, we marginalize it out
+    if (kf.unused_count > m_params.max_steps_unused_keyscan) {
       marg_results.push_back(kf.idx);
-      finished_keyframes.insert(kf.idx);
+      finished_keyscans.insert(kf.idx);
     }
   }
 
-  m_keyframes.erase(std::remove_if(m_keyframes.begin(), m_keyframes.end(),
-                                   [&](const Scan &f) {
-                                     return finished_keyframes.find(f.idx) !=
-                                            finished_keyframes.end();
-                                   }),
-                    m_keyframes.end());
+  m_keyscans.erase(std::remove_if(m_keyscans.begin(), m_keyscans.end(),
+                                  [&](const Scan &f) {
+                                    return finished_keyscans.find(f.idx) !=
+                                           finished_keyscans.end();
+                                  }),
+                   m_keyscans.end());
 
-  // Marginalize keyframe we have too many keyframes
+  // Marginalize keyscan we have too many keyscans
   // This should ideally never be reached in actuality
-  if ((m_params.max_num_keyframes > 0 &&
-       m_keyframes.size() > m_params.max_num_keyframes)) {
-    const auto kf = m_keyframes.front();
-    m_keyframes.pop_front();
+  if ((m_params.max_num_keyscans > 0 &&
+       m_keyscans.size() > m_params.max_num_keyscans)) {
+    const auto kf = m_keyscans.front();
+    m_keyscans.pop_front();
     marg_results.push_back(kf.idx);
   }
 

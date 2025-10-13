@@ -37,52 +37,52 @@ bool is_empty(const std::tuple<PlanePoint::Ptr, PointPoint::Ptr> &constraints) {
 }
 
 ConstraintManager::ConstraintMap &
-ConstraintManager::get_constraints(const FrameIndex &frame_j) noexcept {
+ConstraintManager::get_constraints(const ScanIndex &scan_j) noexcept {
   // Check if it already exists
-  auto search = m_constraints.find(frame_j);
+  auto search = m_constraints.find(scan_j);
   if (search != m_constraints.end()) {
     return search.value();
   }
   // If not, make it and return it
   else {
-    tsl::robin_map<FrameIndex, std::tuple<PlanePoint::Ptr, PointPoint::Ptr>>
+    tsl::robin_map<ScanIndex, std::tuple<PlanePoint::Ptr, PointPoint::Ptr>>
         new_constraints;
 
-    // Make the new entry for each previous frame
+    // Make the new entry for each previous scan
     for (const auto key : m_values.keys()) {
       auto i = gtsam::Symbol(key).index();
-      if (i == frame_j)
+      if (i == scan_j)
         continue;
       new_constraints.insert(
           std::make_pair(i, std::make_tuple(std::make_shared<PlanePoint>(),
                                             std::make_shared<PointPoint>())));
     }
 
-    m_constraints.insert(std::make_pair(frame_j, new_constraints));
-    return m_constraints.at(frame_j);
+    m_constraints.insert(std::make_pair(scan_j, new_constraints));
+    return m_constraints.at(scan_j);
   }
 }
 
 ConstraintManager::ConstraintMap &
 ConstraintManager::get_current_constraints() noexcept {
-  return get_constraints(m_frame);
+  return get_constraints(m_scan);
 }
 
 gtsam::Pose3 ConstraintManager::predict_next() const noexcept {
-  // Handle the case where frame = 0 and we haven't started yet
+  // Handle the case where scan = 0 and we haven't started yet
   if (!initialized()) {
     return gtsam::Pose3::Identity();
   }
 
-  size_t frame = m_frame + 1;
+  size_t scan = m_scan + 1;
 
-  bool prev_exists = frame > 0 && m_values.exists(X(frame - 1));
-  bool prev_prev_exists = frame > 1 && m_values.exists(X(frame - 2));
+  bool prev_exists = scan > 0 && m_values.exists(X(scan - 1));
+  bool prev_prev_exists = scan > 1 && m_values.exists(X(scan - 2));
 
   // If we have the previous 2 poses, do a constant velocity model
   if (prev_exists && prev_prev_exists) {
-    const auto prev_pose = get_pose(frame - 1);
-    const auto prev_prev_pose = get_pose(frame - 2);
+    const auto prev_pose = get_pose(scan - 1);
+    const auto prev_prev_pose = get_pose(scan - 2);
     auto prediction = prev_pose * (prev_prev_pose.inverse() * prev_pose);
     // normalize rotation to avoid rounding errors
     prediction = Pose3(prediction.rotation().normalized(), prediction.translation());
@@ -91,7 +91,7 @@ gtsam::Pose3 ConstraintManager::predict_next() const noexcept {
 
   // If we just have the previous pose, return that
   else if (prev_exists) {
-    return get_pose(frame - 1);
+    return get_pose(scan - 1);
   }
 
   // If we don't have any previous poses, return identity
@@ -104,7 +104,7 @@ gtsam::Values ConstraintManager::optimize(bool fast) noexcept {
   if (m_params.disable_smoothing) {
     auto graph = get_single_graph();
     gtsam::Values values;
-    values.insert(X(m_frame), get_pose(m_frame));
+    values.insert(X(m_scan), get_pose(m_scan));
 
     DenseLMOptimizer optimizer(graph, values, m_params.opt_params);
     return optimizer.optimize();
@@ -117,10 +117,10 @@ gtsam::Values ConstraintManager::optimize(bool fast) noexcept {
   // Solve!
 }
 
-void ConstraintManager::marginalize(const std::vector<FrameIndex> &frames) noexcept {
+void ConstraintManager::marginalize(const std::vector<ScanIndex> &scans) noexcept {
 
   gtsam::KeyVector keys;
-  for (const auto &f : frames) {
+  for (const auto &f : scans) {
     keys.push_back(X(f));
   }
 
@@ -143,8 +143,8 @@ void ConstraintManager::marginalize(const std::vector<FrameIndex> &frames) noexc
   }
 
   // Planar constraint factors
-  auto is_marg_frame = [&frames](const FrameIndex &index) {
-    return std::find(frames.begin(), frames.end(), index) != frames.end();
+  auto is_marg_scan = [&scans](const ScanIndex &index) {
+    return std::find(scans.begin(), scans.end(), index) != scans.end();
   };
 
   for (const auto &[j, scan_constraints] : m_constraints) {
@@ -153,7 +153,7 @@ void ConstraintManager::marginalize(const std::vector<FrameIndex> &frames) noexc
       if (is_empty(planar_constraints))
         continue;
 
-      if (is_marg_frame(i) || is_marg_frame(j)) {
+      if (is_marg_scan(i) || is_marg_scan(j)) {
         dropped_factors.push_back(FeatureFactor(X(i), pose_j_key, planar_constraints,
                                                 m_params.planar_constraint_sigma));
       }
@@ -183,7 +183,7 @@ void ConstraintManager::marginalize(const std::vector<FrameIndex> &frames) noexc
   }
 
   // Erase from constraints
-  for (const auto &f : frames) {
+  for (const auto &f : scans) {
     m_constraints.erase(f);
     for (auto it = m_constraints.begin(); it != m_constraints.end(); ++it) {
       auto search = it->second.find(f);
@@ -205,30 +205,30 @@ void ConstraintManager::update_values(const gtsam::Values &values) noexcept {
 
 std::tuple<size_t, ConstraintManager::ConstraintMap &>
 ConstraintManager::step(const gtsam::Pose3 &pose) noexcept {
-  // Only increment the frame if we've already initialized
-  // Skips incrementing for the first frame
+  // Only increment the scan if we've already initialized
+  // Skips incrementing for the first scan
   if (initialized()) {
-    ++m_frame;
+    ++m_scan;
   }
 
-  m_values.insert(X(m_frame), pose);
+  m_values.insert(X(m_scan), pose);
   m_fast_linear = std::nullopt;
 
-  // If this is the first frame, add a prior
-  if (m_frame == 0) {
+  // If this is the first scan, add a prior
+  if (m_scan == 0) {
     m_other_factors.addPrior(X(0), pose, m_params.pose_noise);
   }
 
-  return std::tie(m_frame, get_current_constraints());
+  return std::tie(m_scan, get_current_constraints());
 }
 
-void ConstraintManager::update_pose(const FrameIndex &frame,
+void ConstraintManager::update_pose(const ScanIndex &scan,
                                     const gtsam::Pose3 &pose) noexcept {
-  m_values.update(X(frame), pose);
+  m_values.update(X(scan), pose);
 }
 
 void ConstraintManager::update_current_pose(const gtsam::Pose3 &pose) noexcept {
-  update_pose(m_frame, pose);
+  update_pose(m_scan, pose);
 }
 
 // ------------------------- Getters ------------------------- //
@@ -236,14 +236,13 @@ gtsam::NonlinearFactorGraph ConstraintManager::get_single_graph() noexcept {
   // Create a new graph
   gtsam::NonlinearFactorGraph graph;
 
-  for (const auto &[i, planar_constraints] : m_constraints.at(m_frame)) {
+  for (const auto &[i, planar_constraints] : m_constraints.at(m_scan)) {
     if (is_empty(planar_constraints))
       continue;
 
-    auto factor = FeatureFactor(X(i), X(m_frame), planar_constraints,
+    auto factor = FeatureFactor(X(i), X(m_scan), planar_constraints,
                                 m_params.planar_constraint_sigma);
-    auto binary_factor =
-        BinaryFactorWrapper::Create(get_pose(i), X(m_frame), factor);
+    auto binary_factor = BinaryFactorWrapper::Create(get_pose(i), X(m_scan), factor);
     graph.push_back(binary_factor);
   }
 
@@ -256,12 +255,12 @@ gtsam::NonlinearFactorGraph ConstraintManager::get_graph(bool fast) noexcept {
 
   // If we should use linearized factors for previous constraints
   if (fast) {
-    // Gather all constraints for the current frame
-    for (const auto &[i, planar_constraints] : m_constraints.at(m_frame)) {
+    // Gather all constraints for the current scan
+    for (const auto &[i, planar_constraints] : m_constraints.at(m_scan)) {
       if (is_empty(planar_constraints))
         continue;
 
-      graph.push_back(FeatureFactor(X(i), X(m_frame), planar_constraints,
+      graph.push_back(FeatureFactor(X(i), X(m_scan), planar_constraints,
                                     m_params.planar_constraint_sigma));
     }
 
@@ -269,8 +268,8 @@ gtsam::NonlinearFactorGraph ConstraintManager::get_graph(bool fast) noexcept {
     if (!m_fast_linear.has_value()) {
       gtsam::NonlinearFactorGraph previous_matches;
       for (const auto &[j, scan_constraints] : m_constraints) {
-        if (j == m_frame) {
-          continue; // Skip the current frame, already added in
+        if (j == m_scan) {
+          continue; // Skip the current scan, already added in
         }
         const auto pose_j_key = X(j);
         for (const auto &[i, planar_constraints] : scan_constraints) {
@@ -309,28 +308,28 @@ gtsam::NonlinearFactorGraph ConstraintManager::get_graph(bool fast) noexcept {
 }
 
 const gtsam::Pose3
-ConstraintManager::get_pose(const FrameIndex &frame) const noexcept {
-  return m_values.at<gtsam::Pose3>(X(frame));
+ConstraintManager::get_pose(const ScanIndex &scan) const noexcept {
+  return m_values.at<gtsam::Pose3>(X(scan));
 }
 
 const gtsam::Pose3 ConstraintManager::get_current_pose() const noexcept {
-  return get_pose(m_frame);
+  return get_pose(m_scan);
 }
 
 const size_t
-ConstraintManager::num_recent_connections(const FrameIndex &frame,
-                                          const FrameIndex &oldest) const noexcept {
-  // Count the number of recent connections to this frame
+ConstraintManager::num_recent_connections(const ScanIndex &scan,
+                                          const ScanIndex &oldest) const noexcept {
+  // Count the number of recent connections to this scan
   size_t count = 0;
   for (const auto &[idx_j, constraints] : m_constraints) {
     if (idx_j < oldest) {
       continue;
     }
 
-    const auto &frame_constraints = constraints.find(frame);
-    if (frame_constraints != constraints.end()) {
-      count += std::get<0>(frame_constraints.value())->num_constraints();
-      count += std::get<1>(frame_constraints.value())->num_constraints();
+    const auto &scan_constraints = constraints.find(scan);
+    if (scan_constraints != constraints.end()) {
+      count += std::get<0>(scan_constraints.value())->num_constraints();
+      count += std::get<1>(scan_constraints.value())->num_constraints();
     }
   }
   return count;

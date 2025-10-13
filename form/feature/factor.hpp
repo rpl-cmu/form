@@ -73,8 +73,8 @@ struct PlanePoint {
 
   /// @brief Evaluate the residual given two poses
   ///
-  /// @param Ti The pose of the first frame
-  /// @param Tj The pose of the second frame
+  /// @param Ti The pose of the first scan
+  /// @param Tj The pose of the second scan
   /// @param residual_D_Ti Optional Jacobian of the residual w.r.t. Ti
   /// @param residual_D_Tj Optional Jacobian of the residual w.r.t. Tj
   /// @return The residual vector
@@ -118,8 +118,8 @@ struct PointPoint {
 
   /// @brief Evaluate the residual given two poses
   ///
-  /// @param Ti The pose of the first frame
-  /// @param Tj The pose of the second frame
+  /// @param Ti The pose of the first scan
+  /// @param Tj The pose of the second scan
   /// @param residual_D_Ti Optional Jacobian of the residual w.r.t. Ti
   /// @param residual_D_Tj Optional Jacobian of the residual w.r.t. Tj
   /// @return The residual vector
@@ -151,8 +151,8 @@ public:
 
   /// @brief Evaluate the residual given two poses
   ///
-  /// @param Ti The pose of the first frame
-  /// @param Tj The pose of the second frame
+  /// @param Ti The pose of the first scan
+  /// @param Tj The pose of the second scan
   /// @param residual_D_Ti Optional Jacobian of the residual w.r.t. Ti
   /// @param residual_D_Tj Optional Jacobian of the residual w.r.t. Tj
   /// @return The residual vector
