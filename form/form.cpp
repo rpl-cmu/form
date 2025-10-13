@@ -66,6 +66,7 @@ Estimator::register_scan(const std::vector<Eigen::Vector3f> &scan) noexcept {
 
   // ICP loop
   gtsam::Values new_values;
+  auto estimates = [&](size_t i) { return m_constraints.get_pose(i); };
   for (size_t idx = 0; idx < m_params.matcher.max_num_rematches; ++idx) {
     auto before = m_constraints.get_current_pose();
 
@@ -73,8 +74,8 @@ Estimator::register_scan(const std::vector<Eigen::Vector3f> &scan) noexcept {
     // Match each type of feature
     tuple::for_seq(SEQ, [&](auto I) {
       std::get<I>(m_matcher).template match<I>(std::get<I>(world_map),
-                                               std::get<I>(keypoints), before,
-                                               m_constraints, scan_constraints);
+                                               std::get<I>(keypoints), estimates,
+                                               scan_constraints);
     });
 
     // ---------------------- Semi-Linearized Optimization ---------------------- //

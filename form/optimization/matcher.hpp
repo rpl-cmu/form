@@ -19,9 +19,10 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
+#include "form/feature/factor.hpp"
 #include "form/mapping/map.hpp"
-#include "form/optimization/constraints.hpp"
 #include "form/utils.hpp"
+#include <gtsam/geometry/Pose3.h>
 #include <tbb/concurrent_vector.h>
 #include <tbb/parallel_for.h>
 
@@ -60,14 +61,13 @@ public:
   /// @tparam I Index of the constraint type (0 for PlanePoint, 1 for PointPoint)
   /// @param map The voxel map to match against
   /// @param keypoints The keypoints to match
-  /// @param init Initial pose estimate for the scan the keypoints come from
-  /// @param manager The constraint manager containing the poses of all scans
+  /// @param estimates Function that returns the pose estimate for a given FrameIndex
   /// @param scan_constraints Map from FrameIndex to a tuple of constraint vectors
   /// where the matched constraints will be added
   template <int I>
   void match(const VoxelMap<Point> &map, const std::vector<Point> &keypoints,
-             const gtsam::Pose3 &init, const ConstraintManager &manager,
-             tsl::robin_map<FrameIndex, std::tuple<PlanePoint::Ptr, PointPoint::Ptr>>
+             const std::function<gtsam::Pose3(size_t)> &estimates,
+             tsl::robin_map<size_t, std::tuple<PlanePoint::Ptr, PointPoint::Ptr>>
                  &scan_constraints) {
     // Set everything up
     matches.clear();
@@ -76,6 +76,7 @@ public:
     }
     matches.reserve(keypoints.size());
     auto max_dist_sqrd = m_params.max_dist_matching * m_params.max_dist_matching;
+    auto init = estimates(keypoints.front().scan);
 
     // Do the matching
     const auto range = tbb::blocked_range{keypoints.cbegin(), keypoints.cend()};
@@ -86,7 +87,7 @@ public:
         // move back into local frames
         match.query = *kp;
         if (match.found()) {
-          auto &scan_pose = manager.get_pose(match.point.scan);
+          auto scan_pose = estimates(match.point.scan);
           match.point.transform_in_place(scan_pose.inverse());
         }
 

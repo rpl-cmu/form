@@ -35,16 +35,17 @@ make it faster when sparsity isn't a concern.
 */
 namespace form {
 
-/// Extension of LM that uses dense optimization instead of sparse bayes tree solver.
+/// @brief Extension of LM that uses dense optimization instead of sparse bayes tree
+/// solver.
 class DenseLMOptimizer : public gtsam::LevenbergMarquardtOptimizer {
 public:
-  /// Constructor
+  /// @brief Constructor
   DenseLMOptimizer(const gtsam::NonlinearFactorGraph &graph,
                    const gtsam::Values &initialValues,
                    const gtsam::LevenbergMarquardtParams &params)
       : LevenbergMarquardtOptimizer(graph, initialValues, params) {}
 
-  /// Solve densely instead of using the sparse solver
+  /// @brief Solve densely instead of using the sparse solver
   gtsam::VectorValues
   solve(const gtsam::GaussianFactorGraph &gfg,
         const gtsam::NonlinearOptimizerParams &params) const override {
@@ -52,16 +53,16 @@ public:
   }
 };
 
-/// Factor that forces gtsam factors to use Hessian linearization instead of Jacobian
-/// linearization. This is more efficient when residual sizes are large and the
-/// problem is dense.
+/// @brief Factor that forces gtsam factors to use Hessian linearization instead of
+/// Jacobian linearization. This is more efficient when residual sizes are large and
+/// the problem is dense.
 class DenseFactor : public gtsam::NoiseModelFactor2<gtsam::Pose3, gtsam::Pose3> {
 public:
   DenseFactor(const gtsam::noiseModel::Base::shared_ptr &noiseModel,
               const gtsam::Key i, const gtsam::Key j)
       : gtsam::NoiseModelFactor2<gtsam::Pose3, gtsam::Pose3>(noiseModel, i, j) {}
 
-  // Blatantly stolen from here,
+  // Blatantly stolen from here, just with last line changed:
   // https://github.com/borglab/gtsam/blob/develop/gtsam/nonlinear/NonlinearFactor.cpp#L152
   boost::shared_ptr<gtsam::GaussianFactor>
   linearize(const gtsam::Values &x) const override {
@@ -85,8 +86,8 @@ public:
   }
 };
 
-/// A fast isotropic noise model that uses a single sigma value for all dimensions.
-/// The gtsam version allocates a vector of sigmas, which is unnecessary
+/// @brief A fast isotropic noise model that uses a single sigma value for all
+/// dimensions. The gtsam version allocates a vector of sigmas, which is unnecessary
 class FastIsotropic : public gtsam::noiseModel::Gaussian {
   typedef boost::shared_ptr<FastIsotropic> shared_ptr;
 
@@ -138,7 +139,8 @@ public:
   }
 };
 
-// Wrapper around a gtsam::NoiseModelFactor2 to allow for a fixed FIRST variable
+/// @brief Wrapper around a gtsam::NoiseModelFactor2 to allow for a fixed FIRST
+/// variable
 class BinaryFactorWrapper : public gtsam::NoiseModelFactor1<gtsam::Pose3> {
   using Base = gtsam::NoiseModelFactor1<gtsam::Pose3>;
   using Wrapped = gtsam::NoiseModelFactor2<gtsam::Pose3, gtsam::Pose3>;

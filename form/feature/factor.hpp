@@ -21,9 +21,7 @@
 // SOFTWARE.
 #pragma once
 
-#include <gtsam/geometry/Point3.h>
 #include <gtsam/geometry/Pose3.h>
-#include <gtsam/nonlinear/NonlinearFactor.h>
 #include <vector>
 
 #include "form/feature/features.hpp"

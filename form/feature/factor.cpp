@@ -21,10 +21,6 @@
 // SOFTWARE.
 #include "form/feature/factor.hpp"
 #include "form/optimization/gtsam.hpp"
-#include <Eigen/src/Core/Matrix.h>
-#include <Eigen/src/Core/util/Constants.h>
-#include <gtsam/base/Matrix.h>
-#include <gtsam/base/Vector.h>
 #include <gtsam/linear/HessianFactor.h>
 #include <gtsam/linear/JacobianFactor.h>
 #include <gtsam/linear/NoiseModel.h>
