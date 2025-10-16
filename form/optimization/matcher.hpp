@@ -69,6 +69,10 @@ public:
              const std::function<gtsam::Pose3(size_t)> &estimates,
              tsl::robin_map<size_t, std::tuple<PlanePoint::Ptr, PointPoint::Ptr>>
                  &scan_constraints) {
+    if (keypoints.empty()) {
+      return;
+    }
+
     // Set everything up
     matches.clear();
     for (auto it = scan_constraints.begin(); it != scan_constraints.end(); ++it) {
