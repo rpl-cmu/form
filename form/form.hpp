@@ -80,7 +80,7 @@ struct Estimator {
 
   /// @brief Register a new scan and return the extracted features
   std::tuple<std::vector<PlanarFeat>, std::vector<PointFeat>>
-  register_scan(const std::vector<Eigen::Vector3f> &scan) noexcept;
+  register_scan(const std::vector<PointXYZf> &scan) noexcept;
 };
 
 } // namespace form

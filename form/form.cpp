@@ -38,7 +38,7 @@ Estimator::Estimator(const Estimator::Params &params) noexcept
                      KeypointMap<PointFeat>(m_params.map)} {}
 
 std::tuple<std::vector<PlanarFeat>, std::vector<PointFeat>>
-Estimator::register_scan(const std::vector<Eigen::Vector3f> &scan) noexcept {
+Estimator::register_scan(const std::vector<PointXYZf> &scan) noexcept {
   constexpr auto SEQ = std::make_index_sequence<2>{};
 
   //

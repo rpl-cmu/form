@@ -108,8 +108,8 @@ FeatureExtractor::extract(const std::vector<Point> &scan, size_t scan_idx) const
           compute_normal(idx, scan, valid_mask);
       if (normal.has_value()) {
         result_planar_tbb.emplace_back(
-            static_cast<double>(point.x()), static_cast<double>(point.y()),
-            static_cast<double>(point.z()), static_cast<double>(normal.value().x()),
+            static_cast<double>(point.x), static_cast<double>(point.y),
+            static_cast<double>(point.z), static_cast<double>(normal.value().x()),
             static_cast<double>(normal.value().y()),
             static_cast<double>(normal.value().z()), static_cast<size_t>(scan_idx));
       }
@@ -124,8 +124,8 @@ FeatureExtractor::extract(const std::vector<Point> &scan, size_t scan_idx) const
   for (const size_t &idx : point_indices) {
     const Point &point = scan[idx];
     result_point.emplace_back(
-        static_cast<double>(point.x()), static_cast<double>(point.y()),
-        static_cast<double>(point.z()), static_cast<size_t>(scan_idx));
+        static_cast<double>(point.x), static_cast<double>(point.y),
+        static_cast<double>(point.z), static_cast<size_t>(scan_idx));
   }
 
   return std::make_tuple(result_planar, result_point);
@@ -244,14 +244,14 @@ FeatureExtractor::compute_curvature(const std::vector<Point> &scan,
       // If valid compute the curvature
       else {
         // Initialize with the difference term
-        double dx = -(2.0 * params.neighbor_points) * scan[idx].x();
-        double dy = -(2.0 * params.neighbor_points) * scan[idx].y();
-        double dz = -(2.0 * params.neighbor_points) * scan[idx].z();
+        double dx = -(2.0 * params.neighbor_points) * scan[idx].x;
+        double dy = -(2.0 * params.neighbor_points) * scan[idx].y;
+        double dz = -(2.0 * params.neighbor_points) * scan[idx].z;
         // Iterate over neighbors and accumulate
         for (size_t n = 1; n <= params.neighbor_points; n++) {
-          dx = dx + scan[idx - n].x() + scan[idx + n].x();
-          dy = dy + scan[idx - n].y() + scan[idx + n].y();
-          dz = dz + scan[idx - n].z() + scan[idx + n].z();
+          dx = dx + scan[idx - n].x + scan[idx + n].x;
+          dy = dy + scan[idx - n].y + scan[idx + n].y;
+          dz = dz + scan[idx - n].z + scan[idx + n].z;
         }
         curvature.emplace_back(idx, dx * dx + dy * dy + dz * dz);
       }
@@ -313,7 +313,7 @@ FeatureExtractor::compute_normal(
   // std::printf("---- Found %zu neighbors\n", neighbors.size());
   Eigen::Matrix<T, Eigen::Dynamic, 3> A(neighbors.size(), 3);
   for (size_t j = 0; j < neighbors.size(); ++j) {
-    A.row(j) = neighbors[j] - point;
+    A.row(j) = neighbors[j].vec3() - point.vec3();
   }
   A /= neighbors.size();
   Eigen::Matrix<T, 3, 3> Cov = A.transpose() * A;
@@ -410,7 +410,7 @@ FeatureExtractor::find_closest(const Point &point, const size_t &start,
     if (!valid_mask[idx]) {
       continue;
     }
-    const double dist2 = (scan[idx] - point).squaredNorm();
+    const double dist2 = (scan[idx].vec4() - point.vec4()).squaredNorm();
     if (dist2 < min_dist2) {
       min_dist2 = dist2;
       closest_point = idx;
@@ -427,7 +427,7 @@ void FeatureExtractor::find_neighbors(const size_t &idx,
   const auto &point = scan[idx];
   for (size_t i = 1; i <= params.neighbor_points; i++) {
     const auto &neighbor = scan[idx + i];
-    const double range2 = (neighbor - point).squaredNorm();
+    const double range2 = (neighbor.vec4() - point.vec4()).squaredNorm();
     if (range2 < params.radius * params.radius) {
       out.push_back(neighbor);
     } else {
@@ -438,7 +438,7 @@ void FeatureExtractor::find_neighbors(const size_t &idx,
   // search in the negative direction
   for (size_t i = 1; i <= params.neighbor_points; i++) {
     const auto &neighbor = scan[idx - i];
-    const double range2 = (neighbor - point).squaredNorm();
+    const double range2 = (neighbor.vec4() - point.vec4()).squaredNorm();
     if (range2 < params.radius * params.radius) {
       out.push_back(neighbor);
     } else {

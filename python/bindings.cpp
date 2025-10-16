@@ -40,8 +40,8 @@ template <typename Point> evalio::Point point_to_evalio(const Point &point) {
   };
 }
 
-Eigen::Vector3f point_to_form(const evalio::Point &point) {
-  return Eigen::Vector3f(point.x, point.y, point.z);
+form::PointXYZf point_to_form(const evalio::Point &point) {
+  return form::PointXYZf(point.x, point.y, point.z);
 }
 
 // ------------------------- Pipeline ------------------------- //
@@ -147,7 +147,7 @@ public:
   std::map<std::string, std::vector<evalio::Point>>
   add_lidar(evalio::LidarMeasurement mm) override {
     // convert to evalio
-    std::vector<Eigen::Vector3f> scan;
+    std::vector<form::PointXYZf> scan;
     auto start = mm.stamp;
     auto end = mm.stamp + delta_time_;
 
@@ -214,9 +214,15 @@ NB_MODULE(_core, m) {
   m.def("extract_keypoints", [](const std::vector<Eigen::Vector3d> &points,
                                 const form::FeatureExtractor::Params &params,
                                 evalio::LidarParams &lidar_params) {
+    // Convert to form points
+    std::vector<form::PointXYZf> points_form;
+    for (const auto &point : points) {
+      points_form.emplace_back(point.x(), point.y(), point.z());
+    }
+
     // Call the keypoint extraction function from the Tclio class
     auto [planar_keypoints, point_keypoints] =
-        form::FeatureExtractor(params, 0).extract(points, 0);
+        form::FeatureExtractor(params, 0).extract(points_form, 0);
 
     // return a tuple of (planar_points, normals, point_points)
     std::vector<Eigen::Vector3d> planar_points;

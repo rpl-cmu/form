@@ -29,7 +29,66 @@
 #include <tbb/task_arena.h>
 #include <tuple>
 
+#include <Eigen/Dense>
+#include <gtsam/geometry/Pose3.h>
+
 namespace form {
+
+/// @brief Simple 3D point structure for loading in points
+struct PointXYZf {
+  using Scalar = float;
+  float x;
+  float y;
+  float z;
+  float _ = static_cast<float>(0);
+
+  PointXYZf(float x, float y, float z) : x(x), y(y), z(z), _(0) {}
+
+  // ------------------------- Getters ------------------------- //
+  [[nodiscard]] inline Eigen::Map<Eigen::Matrix<float, 3, 1>> vec3() noexcept {
+    return Eigen::Map<Eigen::Matrix<float, 3, 1>>(&x);
+  }
+
+  [[nodiscard]] inline Eigen::Map<const Eigen::Matrix<float, 3, 1>>
+  vec3() const noexcept {
+    return Eigen::Map<const Eigen::Matrix<float, 3, 1>>(&x);
+  }
+
+  [[nodiscard]] inline Eigen::Map<const Eigen::Matrix<float, 4, 1>>
+  vec4() const noexcept {
+    return Eigen::Map<const Eigen::Matrix<float, 4, 1>>(&x);
+  }
+
+  [[nodiscard]] inline Eigen::Map<Eigen::Array<float, 3, 1>> array() noexcept {
+    return Eigen::Map<Eigen::Array<float, 3, 1>>(&x);
+  }
+
+  [[nodiscard]] inline Eigen::Map<const Eigen::Array<float, 3, 1>>
+  array() const noexcept {
+    return Eigen::Map<const Eigen::Array<float, 3, 1>>(&x);
+  }
+
+  // ------------------------- Misc ------------------------- //
+  inline void transform_in_place(const gtsam::Pose3 &pose) noexcept {
+    vec3() = (pose * vec3().template cast<double>()).template cast<float>();
+  }
+
+  [[nodiscard]] inline PointXYZf transform(const gtsam::Pose3 &pose) const noexcept {
+    auto point = *this;
+    point.transform_in_place(pose);
+    return point;
+  }
+
+  [[nodiscard]] inline float squaredNorm() const noexcept {
+    return vec4().squaredNorm();
+  }
+
+  [[nodiscard]] inline float norm() const noexcept { return vec4().norm(); }
+
+  [[nodiscard]] constexpr bool operator==(const PointXYZf &other) const noexcept {
+    return x == other.x && y == other.y && z == other.z;
+  }
+};
 
 namespace tuple {
 // Some helpers ot make iterating over tuples easier
