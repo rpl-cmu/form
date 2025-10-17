@@ -1,9 +1,13 @@
 <div align="center">
 <h1>FORM</h1>
-<h3 style="font-weight: normal"><b>F</b>ixed-Lag <b>O</b>dometry with <b>R</b>eparative <b>M</b>apping</h4>
-<!-- <a href="https://github.com/rpl-cmu/form/blob/master/LICENSE"><img src="https://img.shields.io/github/license/rpl-cmu/form" /></a> -->
+<a href="https://github.com/rpl-cmu/form/releases"><img src="https://img.shields.io/github/v/release/rpl-cmu/form" /></a>
+<a href="https://github.com/rpl-cmu/form/blob/master/LICENSE"><img src="https://img.shields.io/github/license/rpl-cmu/form
+" /></a>
+<a href="https://arxiv.org/abs/2510.09966"><img src="https://img.shields.io/badge/arXiv-2510.09966-b31b1b.svg" /></a>
+<h4 style="font-weight: normal"><b>F</b>ixed-Lag <b>O</b>dometry with <b>R</b>eparative <b>M</b>apping</h4>
 
-FORM is a LiDAR Odometry system that performs fixed-lag smoothing over a window of prior poses along with map reparations, all in real-time with minimal parameters.
+
+FORM is a LiDAR Odometry system that performs fixed-lag **smoothing** and sub-map **reparations**, all in **real-time** with minimal parameters.
 ![](.github/assets/readme.png)
 
 </div>
@@ -52,5 +56,13 @@ evalio stats evalio_results/25.10.03_full/
 ## Citation
 If you use FORM for any academic work, please cite:
 ```
-TODO
+@misc{potokar2025formfixedlagodometryreparative,
+  title={FORM: Fixed-Lag Odometry with Reparative Mapping utilizing Rotating LiDAR Sensors}, 
+  author={Easton R. Potokar and Taylor Pool and Daniel McGann and Michael Kaess},
+  year={2025},
+  eprint={2510.09966},
+  archivePrefix={arXiv},
+  primaryClass={cs.RO},
+  url={https://arxiv.org/abs/2510.09966}, 
+}
 ```
