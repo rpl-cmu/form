@@ -1,6 +1,7 @@
 <div align="center">
 <h1>FORM</h1>
 <b>F</b>ixed-Lag <b>O</b>dometry with <b>R</b>eparative <b>M</b>apping
+
 <a href="https://github.com/rpl-cmu/form/releases"><img src="https://img.shields.io/github/v/release/rpl-cmu/form" /></a>
 <a href="https://github.com/rpl-cmu/form/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/rpl-cmu/form/ci.yml" /></a>
 <a href="https://github.com/rpl-cmu/form/blob/master/LICENSE"><img src="https://img.shields.io/github/license/rpl-cmu/form" /></a>
