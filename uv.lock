@@ -504,7 +504,7 @@ wheels = [
 [[package]]
 name = "evalio"
 version = "0.4.0"
-source = { directory = "../evalio" }
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "asteval" },
     { name = "distinctipy" },
@@ -518,44 +518,13 @@ dependencies = [
     { name = "tqdm" },
     { name = "typer" },
 ]
-
-[package.metadata]
-requires-dist = [
-    { name = "asteval", specifier = ">=1.0.6" },
-    { name = "distinctipy", specifier = ">=1.3.4" },
-    { name = "gdown", specifier = ">=5.2.0" },
-    { name = "joblib", specifier = ">=1.5.2" },
-    { name = "numpy" },
-    { name = "polars", specifier = ">=1.33.1" },
-    { name = "pyyaml", specifier = ">=6.0" },
-    { name = "rapidfuzz", specifier = ">=3.12.2" },
-    { name = "rerun-sdk", marker = "extra == 'vis'", specifier = ">=0.25" },
-    { name = "rosbags", specifier = ">=0.10.10" },
-    { name = "tqdm", specifier = ">=4.66" },
-    { name = "typer", specifier = ">=0.15.3" },
-]
-provides-extras = ["vis"]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "basedpyright", specifier = ">=1.31.4" },
-    { name = "bump-my-version", specifier = ">=1.1.1" },
-    { name = "cmake", specifier = "<4.0.0" },
-    { name = "compdb", specifier = ">=0.2.0" },
-    { name = "joblib-stubs", specifier = ">=1.5.2.0.20250831" },
-    { name = "mike", specifier = ">=2.1.3" },
-    { name = "mkdocs", specifier = ">=1.6.1" },
-    { name = "mkdocs-gen-files", specifier = ">=0.5.0" },
-    { name = "mkdocs-material", specifier = ">=9.6.11" },
-    { name = "mkdocstrings", extras = ["python"], specifier = ">=0.29.1" },
-    { name = "nanobind", specifier = ">=2.9.2" },
-    { name = "pytest", specifier = ">=8.3.5" },
-    { name = "ruff", specifier = ">=0.6.8" },
-    { name = "scipy", specifier = ">=1.15.2" },
-    { name = "scipy-stubs", specifier = ">=1.15.2.1" },
-    { name = "types-pyyaml", specifier = ">=6.0.12.20240917" },
-    { name = "types-tabulate", specifier = ">=0.9.0.20240106" },
-    { name = "types-tqdm", specifier = ">=4.66.0.20240417" },
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a7/a1/3252c56b4403f0903913ba541950850025d46a2351253ad2ecd7c8c72d64/evalio-0.4.0-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:2607a6f082d0043cac41df9bbfda59f1c0984fbdce89293d0354d73d1751b121", size = 3349401, upload-time = "2025-10-15T18:46:36.534Z" },
+    { url = "https://files.pythonhosted.org/packages/cd/8d/077f2fe1435180f9a4fc6f1589dda2f8cb1ec44cfb232336f0fbc35e45e1/evalio-0.4.0-cp311-cp311-manylinux_2_28_x86_64.whl", hash = "sha256:6a769465b8dc6cb29be30af287a5fd55b48e3b9fc5d3569c70d31cf666d37f50", size = 4031364, upload-time = "2025-10-15T18:46:38.304Z" },
+    { url = "https://files.pythonhosted.org/packages/86/8b/598f6a484b605a6c3d59247a276fdd5ea4d2d43c99504909cdc995c70ab7/evalio-0.4.0-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:b33d5c88c87c84ed638f41997e8c3b382315f3e06f93e22353d2b89f7ec7cf2e", size = 3348864, upload-time = "2025-10-15T18:46:39.684Z" },
+    { url = "https://files.pythonhosted.org/packages/88/c1/61edb429c4fd20bd6b36621249052a6bef1ca623f3c02e718c0299a3aacc/evalio-0.4.0-cp312-cp312-manylinux_2_28_x86_64.whl", hash = "sha256:754a7fb2b188d09de1ec7d6779ade8524aee50dc970d1552ea842796a80bf387", size = 4027165, upload-time = "2025-10-15T18:46:41.095Z" },
+    { url = "https://files.pythonhosted.org/packages/ac/7d/7beb27341d5d228e1a37a975ee3bafdc6c8be18c824b2c2d1d71cb236f06/evalio-0.4.0-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:08290ea683f30db2252a50281ae6f935221ac1f9663cc543c285b1c7039e8f3c", size = 3348864, upload-time = "2025-10-15T18:46:42.824Z" },
+    { url = "https://files.pythonhosted.org/packages/e8/1f/05439ddedb7fe0e2a414c14d20fc61702f954c71214f842ca1c2291051ca/evalio-0.4.0-cp313-cp313-manylinux_2_28_x86_64.whl", hash = "sha256:817fa3023215d431f81187aa247297dba848300865acb1093f25ae70f2b510f5", size = 4027167, upload-time = "2025-10-15T18:46:44.606Z" },
 ]
 
 [[package]]
@@ -669,7 +638,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "evalio", directory = "../evalio" },
+    { name = "evalio", specifier = ">=0.4" },
     { name = "gradio-rerun", specifier = ">=0.24.0" },
     { name = "ipython", specifier = ">=9.5.0" },
     { name = "polars", specifier = ">=1.30.0" },

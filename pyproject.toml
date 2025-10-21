@@ -31,9 +31,6 @@ FORM_BUILD_PYTHON = true
 CMAKE_BUILD_TYPE = "Release"
 # CMAKE_BUILD_TYPE = "RelWithDebInfo"
 
-[tool.uv.sources]
-evalio = { path = "../evalio" }
-
 [tool.basedpyright]
 typeCheckingMode = "standard"
 include = ["python"]
