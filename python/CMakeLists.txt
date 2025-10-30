@@ -19,7 +19,7 @@ FetchContent_MakeAvailable(nanobind)
 FetchContent_Declare(
     evalio
     GIT_REPOSITORY https://github.com/contagon/evalio.git
-    GIT_TAG "failed-runs"
+    GIT_TAG "feat/pipeline-estimate-stamping"
     # FIND_PACKAGE_ARGS
 )
 FetchContent_MakeAvailable(evalio)

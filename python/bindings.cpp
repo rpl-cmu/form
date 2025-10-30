@@ -89,8 +89,6 @@ public:
   // clang-format on
 
   // ------------------------- Getters ------------------------- //
-  // Returns the most recent pose estimate
-  const evalio::SE3 pose() override { return current_pose; }
 
   // Returns the current submap of the environment
   const std::map<std::string, std::vector<evalio::Point>> map() override {
@@ -144,8 +142,7 @@ public:
   void add_imu(evalio::ImuMeasurement mm) override {}
 
   // Add a LiDAR measurement
-  std::map<std::string, std::vector<evalio::Point>>
-  add_lidar(evalio::LidarMeasurement mm) override {
+  void add_lidar(evalio::LidarMeasurement mm) override {
     // convert to evalio
     std::vector<form::PointXYZf> scan;
     auto start = mm.stamp;
@@ -175,7 +172,8 @@ public:
       all_point.push_back(ev_point);
     }
 
-    return points;
+    this->save(mm.stamp, current_pose);
+    this->save(mm.stamp, points);
   }
 };
 

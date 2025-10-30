@@ -26,7 +26,10 @@ evalio_results
 *.pyi
 
 *.png
+*.svg
 
 # final outputs
 figures
 graphics
+
+imu_temp

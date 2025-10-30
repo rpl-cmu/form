@@ -1,0 +1,9 @@
+pipelines:
+  - pipeline: form
+    name: main_evalio_updates
+
+datasets:
+  - name: oxford_spires/blenheim_palace_02
+    length: 6000
+  # - name: oxford_spires_custom/blenheim_palace_02
+  #   length: 6000

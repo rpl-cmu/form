@@ -6,7 +6,7 @@ readme = "README.md"
 authors = [{ name = "Easton Potokar", email = "contagon6@gmail.com" }]
 requires-python = ">=3.11"
 dependencies = [
-    "evalio>=0.4",
+    "evalio>=0.4.1",
     "gradio-rerun>=0.24.0",
     "ipython>=9.5.0",
     "polars>=1.30.0",
@@ -34,3 +34,6 @@ CMAKE_BUILD_TYPE = "Release"
 [tool.basedpyright]
 typeCheckingMode = "standard"
 include = ["python"]
+
+[tool.uv.sources]
+evalio = { path = "../evalio" }
