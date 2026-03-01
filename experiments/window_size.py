@@ -40,11 +40,12 @@ fig, ax = plt.subplots(
 windows = np.arange(WINDOW_SMALL.value, 18.0, 2.0)
 final_results = {name: [] for name in names}
 for w in windows:
-    results = evaluate([data], windows=[WindowMeters(float(w))])
+    m = WindowMeters(float(w))
+    results = evaluate([data], windows=[m])
     print(f"Evaluating window size {w} with {len(results)} results")
     for r in results:
         if r["name"] in final_results:
-            final_results[r["name"]].append(r[metric] * 10)
+            final_results[r["name"]].append(r[f"RTEt_{m.name()}"] * 10)
 
 # plot the results
 ax[0].plot([], [], marker="o", color=c["gt"], label=pretty_pipe_names("gt", False))
@@ -80,7 +81,7 @@ for n in names:
     if isinstance(out, Exception):
         print(f"Failed to align {n} to ground truth, quitting.")
         exit()
-    gt_align, t = out
+    t, gt_align = out
 
     offset = ROT * t.poses[rough_indices.start].inverse()
     xyz = np.asarray([(offset * pose).trans for pose in t.poses[rough_indices]])
@@ -97,6 +98,7 @@ for n in names:
 gt = trajectories["gt"]
 for i, n in enumerate(names):
     t = trajectories[n]
+    print(t[0], t[-1])
     ax[i + 1].plot(gt[:, 0], gt[:, 1], color=c["gt"])
     ax[i + 1].scatter(t[:, 0], t[:, 1], color=c[n], s=1)
 

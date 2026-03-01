@@ -106,6 +106,7 @@ def setup_plot() -> dict[str, tuple[float, float, float]]:
         "ct": c[4],
         "ct_2022": c[4],
         "ct_2022_defaults_2": c[4],
+        "ab": c[8],
         "gt": c[7],
     }
 
