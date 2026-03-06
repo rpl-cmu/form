@@ -113,4 +113,14 @@ Estimator::register_scan(const std::vector<PointXYZf> &scan) noexcept {
   return keypoints;
 }
 
+std::tuple<std::vector<PlanarFeat>, std::vector<PointFeat>>
+Estimator::current_map() const noexcept {
+  std::tuple<std::vector<PlanarFeat>, std::vector<PointFeat>> map_points;
+  tuple::for_seq(std::make_index_sequence<2>{}, [&](auto I) {
+    std::get<I>(map_points) =
+        std::get<I>(m_keypoint_map).to_vector(m_constraints.get_values());
+  });
+  return map_points;
+}
+
 } // namespace form

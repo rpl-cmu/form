@@ -137,6 +137,10 @@ public:
   VoxelMap<Point> to_voxel_map(const gtsam::Values &values,
                                double voxel_width) const noexcept;
 
+  /// @brief Transform all keypoints to the global scan and insert them into a
+  /// vector
+  std::vector<Point> to_vector(const gtsam::Values &values) const noexcept;
+
   /// @brief Insert matches into the map, adding only those that are sufficiently
   /// far from existing points based on min_dist_map
   void insert_matches(const tbb::concurrent_vector<Match<Point>> &matches);

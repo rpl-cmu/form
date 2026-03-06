@@ -23,24 +23,26 @@
 
 namespace form_ros {
 
-class OdometryServer : public rclcpp::Node {
+class EstimatorNode : public rclcpp::Node {
 public:
-  /// OdometryServer constructor
-  OdometryServer() = delete;
-  explicit OdometryServer(const rclcpp::NodeOptions &options);
+  /// EstimatorNode constructor
+  EstimatorNode() = delete;
+  explicit EstimatorNode(const rclcpp::NodeOptions &options);
 
 private:
   /// Register new frame
   void RegisterFrame(const sensor_msgs::msg::PointCloud2::ConstSharedPtr &msg);
 
   /// Stream the estimated pose to ROS
-  void PublishOdometry(const gtsam::Pose3 &pose,
-                       const std_msgs::msg::Header &header);
+  void publish_odometry(const gtsam::Pose3 &pose,
+                        const std_msgs::msg::Header &header);
 
-  /// Stream the debugging point clouds for visualization
-  void PublishClouds(const std::vector<form::PlanarFeat> &planar_keypoints,
-                     const std::vector<form::PointFeat> &point_keypoints,
-                     const std_msgs::msg::Header &header);
+  /// Stream the keypoints for visualization
+  template <typename Point>
+  void publish_clouds(
+      const std::vector<Point> &points,
+      rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr publisher,
+      const std_msgs::msg::Header &header);
 
 private:
   /// Tools for broadcasting TFs.
@@ -56,8 +58,10 @@ private:
 
   /// Data publishers.
   rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odom_publisher_;
-  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr frame_publisher_;
-  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr kpoints_publisher_;
+  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr planar_publisher_;
+  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr point_publisher_;
+  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr map_planar_publisher_;
+  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr map_point_publisher_;
 
   /// FORM estimator
   form::Estimator estimator_;

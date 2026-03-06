@@ -10,8 +10,8 @@
 #include <vector>
 
 // FORM-ROS
-#include "OdometryServer.hpp"
 #include "Utils.hpp"
+#include "node.hpp"
 #include "pc2_conversions.h"
 
 // FORM
@@ -52,68 +52,51 @@ namespace form_ros {
 
 using utils::FeatsToPointCloud2;
 
-OdometryServer::OdometryServer(const rclcpp::NodeOptions &options)
+EstimatorNode::EstimatorNode(const rclcpp::NodeOptions &options)
     : rclcpp::Node("form_node", options) {
-  // ROS frame parameters
-  base_frame_ = declare_parameter<std::string>("base_frame", base_frame_);
-  lidar_odom_frame_ =
-      declare_parameter<std::string>("lidar_odom_frame", lidar_odom_frame_);
-  publish_odom_tf_ = declare_parameter<bool>("publish_odom_tf", true);
-  invert_odom_tf_ = declare_parameter<bool>("invert_odom_tf", true);
-  publish_debug_clouds_ = declare_parameter<bool>("publish_debug_clouds", false);
-  position_covariance_ = declare_parameter<double>("position_covariance", 0.1);
+  // clang-format off
+
+  // ROS parameters
+  base_frame_       = declare_parameter<std::string>("base_frame", base_frame_);
+  lidar_odom_frame_ = declare_parameter<std::string>("lidar_odom_frame", lidar_odom_frame_);
+  publish_odom_tf_  = declare_parameter<bool>("publish_odom_tf", true);
+  invert_odom_tf_   = declare_parameter<bool>("invert_odom_tf", true);
+  // TODO: It would be great to pull these out of marginals from FORM directly!
+  publish_debug_clouds_   = declare_parameter<bool>("publish_debug_clouds", false);
+  position_covariance_    = declare_parameter<double>("position_covariance", 0.1);
   orientation_covariance_ = declare_parameter<double>("orientation_covariance", 0.1);
 
   // FORM parameters
   form::Estimator::Params params;
 
   // LiDAR geometry (required)
-  params.extraction.num_rows =
-      declare_parameter<int>("num_rows", params.extraction.num_rows);
-  params.extraction.num_columns =
-      declare_parameter<int>("num_columns", params.extraction.num_columns);
+  params.extraction.num_rows    = declare_parameter<int>("num_rows", params.extraction.num_rows);
+  params.extraction.num_columns = declare_parameter<int>("num_columns", params.extraction.num_columns);
   auto min_range = declare_parameter<double>("min_range", 1.0);
   auto max_range = declare_parameter<double>("max_range", 100.0);
   params.extraction.min_norm_squared = min_range * min_range;
   params.extraction.max_norm_squared = max_range * max_range;
 
   // Feature extraction
-  params.extraction.neighbor_points =
-      declare_parameter<int>("neighbor_points", params.extraction.neighbor_points);
-  params.extraction.num_sectors =
-      declare_parameter<int>("num_sectors", params.extraction.num_sectors);
-  params.extraction.planar_threshold = declare_parameter<double>(
-      "planar_threshold", params.extraction.planar_threshold);
-  params.extraction.planar_feats_per_sector = declare_parameter<int>(
-      "planar_feats_per_sector", params.extraction.planar_feats_per_sector);
-  params.extraction.point_feats_per_sector = declare_parameter<int>(
-      "point_feats_per_sector", params.extraction.point_feats_per_sector);
-  params.extraction.radius =
-      declare_parameter<double>("radius", params.extraction.radius);
-  params.extraction.min_points =
-      declare_parameter<int>("min_points", params.extraction.min_points);
+  params.extraction.neighbor_points         = declare_parameter<int>("neighbor_points", params.extraction.neighbor_points);
+  params.extraction.num_sectors             = declare_parameter<int>("num_sectors", params.extraction.num_sectors);
+  params.extraction.planar_threshold        = declare_parameter<double>("planar_threshold", params.extraction.planar_threshold);
+  params.extraction.planar_feats_per_sector = declare_parameter<int>("planar_feats_per_sector", params.extraction.planar_feats_per_sector);
+  params.extraction.point_feats_per_sector  = declare_parameter<int>("point_feats_per_sector", params.extraction.point_feats_per_sector);
+  params.extraction.radius                  = declare_parameter<double>("radius", params.extraction.radius);
+  params.extraction.min_points              = declare_parameter<int>("min_points", params.extraction.min_points);
 
   // Optimization
-  params.matcher.max_dist_matching = declare_parameter<double>(
-      "max_dist_matching", params.matcher.max_dist_matching);
-  params.matcher.new_pose_threshold = declare_parameter<double>(
-      "new_pose_threshold", params.matcher.new_pose_threshold);
-  params.matcher.max_num_rematches =
-      declare_parameter<int>("max_num_rematches", params.matcher.max_num_rematches);
-  params.constraints.disable_smoothing = declare_parameter<bool>(
-      "disable_smoothing", params.constraints.disable_smoothing);
+  params.matcher.max_dist_matching  = declare_parameter<double>("max_dist_matching", params.matcher.max_dist_matching);
+  params.matcher.new_pose_threshold = declare_parameter<double>("new_pose_threshold", params.matcher.new_pose_threshold);
+  params.matcher.max_num_rematches  = declare_parameter<int>("max_num_rematches", params.matcher.max_num_rematches);
 
   // Mapping
-  params.scans.max_num_keyscans =
-      declare_parameter<int>("max_num_keyscans", params.scans.max_num_keyscans);
-  params.scans.max_num_recent_scans = declare_parameter<int>(
-      "max_num_recent_scans", params.scans.max_num_recent_scans);
-  params.scans.max_steps_unused_keyscan = declare_parameter<int>(
-      "max_steps_unused_keyscan", params.scans.max_steps_unused_keyscan);
-  params.scans.keyscan_match_ratio = declare_parameter<double>(
-      "keyscan_match_ratio", params.scans.keyscan_match_ratio);
-  params.map.min_dist_map =
-      declare_parameter<double>("max_dist_map", params.map.min_dist_map);
+  params.scans.max_num_keyscans         = declare_parameter<int>("max_num_keyscans", params.scans.max_num_keyscans);
+  params.scans.max_num_recent_scans     = declare_parameter<int>("max_num_recent_scans", params.scans.max_num_recent_scans);
+  params.scans.max_steps_unused_keyscan = declare_parameter<int>("max_steps_unused_keyscan", params.scans.max_steps_unused_keyscan);
+  params.scans.keyscan_match_ratio      = declare_parameter<double>("keyscan_match_ratio", params.scans.keyscan_match_ratio);
+  params.map.min_dist_map               = declare_parameter<double>("max_dist_map", params.map.min_dist_map);
 
   // Misc
   params.num_threads = declare_parameter<int>("num_threads", params.num_threads);
@@ -124,16 +107,17 @@ OdometryServer::OdometryServer(const rclcpp::NodeOptions &options)
   // Initialize subscribers
   pointcloud_sub_ = create_subscription<sensor_msgs::msg::PointCloud2>(
       "pointcloud_topic", rclcpp::SensorDataQoS(),
-      std::bind(&OdometryServer::RegisterFrame, this, std::placeholders::_1));
+      std::bind(&EstimatorNode::RegisterFrame, this, std::placeholders::_1));
 
   // Initialize publishers
   rclcpp::QoS qos((rclcpp::SystemDefaultsQoS().keep_last(1).durability_volatile()));
   odom_publisher_ = create_publisher<nav_msgs::msg::Odometry>("form/odometry", qos);
   if (publish_debug_clouds_) {
-    frame_publisher_ = create_publisher<sensor_msgs::msg::PointCloud2>(
-        "form/planar_keypoints", qos);
-    kpoints_publisher_ =
-        create_publisher<sensor_msgs::msg::PointCloud2>("form/point_keypoints", qos);
+    planar_publisher_   = create_publisher<sensor_msgs::msg::PointCloud2>("form/kp_planar", qos);
+    point_publisher_ = create_publisher<sensor_msgs::msg::PointCloud2>("form/kp_point", qos);
+
+    map_planar_publisher_ = create_publisher<sensor_msgs::msg::PointCloud2>("form/map_planar", qos);
+    map_point_publisher_ = create_publisher<sensor_msgs::msg::PointCloud2>("form/map_point", qos);
   }
 
   // Initialize the transform broadcaster
@@ -143,11 +127,13 @@ OdometryServer::OdometryServer(const rclcpp::NodeOptions &options)
   tf2_listener_ = std::make_unique<tf2_ros::TransformListener>(*tf2_buffer_);
 
   RCLCPP_INFO(this->get_logger(), "FORM ROS 2 odometry node initialized");
+  // clang-format on
 }
 
-void OdometryServer::RegisterFrame(
+void EstimatorNode::RegisterFrame(
     const sensor_msgs::msg::PointCloud2::ConstSharedPtr &msg) {
   // Convert PointCloud2 -> organized vector<PointXYZf> using pc2_conversions
+  // TODO: This conversion needs a bunch of work to make sure it's robust
   const auto points =
       form_ros::PointCloud2ToForm(msg, estimator_.m_params.extraction.num_rows,
                                   estimator_.m_params.extraction.num_columns);
@@ -159,15 +145,21 @@ void OdometryServer::RegisterFrame(
   const gtsam::Pose3 pose = estimator_.current_lidar_estimate();
 
   // Publish odometry
-  PublishOdometry(pose, msg->header);
+  publish_odometry(pose, msg->header);
 
   // Publish debug clouds if requested
   if (publish_debug_clouds_) {
-    PublishClouds(planar_kp, point_kp, msg->header);
+    // current keypoints
+    publish_clouds(planar_kp, planar_publisher_, msg->header);
+    publish_clouds(point_kp, point_publisher_, msg->header);
+    // current map
+    const auto [map_planar, map_point] = estimator_.current_map();
+    publish_clouds(map_planar, map_planar_publisher_, msg->header);
+    publish_clouds(map_point, map_point_publisher_, msg->header);
   }
 }
 
-void OdometryServer::PublishOdometry(const gtsam::Pose3 &form_pose,
+void EstimatorNode::publish_odometry(const gtsam::Pose3 &form_pose,
                                      const std_msgs::msg::Header &header) {
   // If necessary, transform the ego-centric pose to the specified
   // base_link/base_footprint frame
@@ -215,15 +207,14 @@ void OdometryServer::PublishOdometry(const gtsam::Pose3 &form_pose,
   odom_publisher_->publish(std::move(odom_msg));
 }
 
-void OdometryServer::PublishClouds(
-    const std::vector<form::PlanarFeat> &planar_keypoints,
-    const std::vector<form::PointFeat> &point_keypoints,
+template <typename Point>
+void publish_clouds(
+    const std::vector<Point> &points,
+    rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr publisher,
     const std_msgs::msg::Header &header) {
-  frame_publisher_->publish(std::move(FeatsToPointCloud2(planar_keypoints, header)));
-  kpoints_publisher_->publish(
-      std::move(FeatsToPointCloud2(point_keypoints, header)));
+  publisher->publish(std::move(FeatsToPointCloud2(points, header)));
 }
 } // namespace form_ros
 
 #include "rclcpp_components/register_node_macro.hpp"
-RCLCPP_COMPONENTS_REGISTER_NODE(form_ros::OdometryServer)
+RCLCPP_COMPONENTS_REGISTER_NODE(form_ros::EstimatorNode)

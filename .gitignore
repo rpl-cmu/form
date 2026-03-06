@@ -12,6 +12,7 @@ log
 # vscode environments
 .vscode
 .envrc
+.clangd
 
 .helix
 
