@@ -22,7 +22,7 @@ experiments = ["feature", "smoothing"]
 
 for pipes, header, exp in zip(pipesss, headers, experiments):
     c = setup_plot()
-    fig, ax = plt.subplots(1, 2, figsize=(COL_WIDTH * 2, 4.0), layout="constrained")
+    fig, ax = plt.subplots(1, 2, figsize=(COL_WIDTH * 2, 3.5), layout="constrained")
 
     df_small = compute_and_cache(WINDOW_SMALL, pipes=pipes)
     df_big = compute_and_cache(WINDOW_LARGE, pipes=pipes)
