@@ -44,7 +44,7 @@ private:
       const std::vector<Point> &points,
       rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr publisher,
       const std_msgs::msg::Header &header) {
-    publisher->publish(std::move(FeatsToPointCloud2(points, header)));
+    publisher->publish(std::move(utils::FeatsToPointCloud2(points, header)));
   }
 
 private:

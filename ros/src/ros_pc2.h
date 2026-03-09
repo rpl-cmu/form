@@ -137,9 +137,18 @@ inline void fill_col_col_major(std::vector<RawPoint> &mm) {
 
 inline std::vector<form::PointXYZf>
 reorder_points(std::vector<RawPoint> &mm, size_t num_rows, size_t num_cols) {
-  std::vector<form::PointXYZf> output(mm.size(), form::PointXYZf(0.0f, 0.0f, 0.0f));
+  std::vector<form::PointXYZf> output(num_rows * num_cols,
+                                      form::PointXYZf(0.0f, 0.0f, 0.0f));
 
   for (auto p : mm) {
+    if (p.row >= num_rows || p.col >= num_cols) {
+      std::cerr << "Warning: Point with row " << static_cast<int>(p.row)
+                << " and col " << p.col
+                << " is out of bounds for num_rows=" << num_rows
+                << " and num_cols=" << num_cols << ". Skipping this point."
+                << std::endl;
+      continue;
+    }
     output[p.row * num_cols + p.col] = form::PointXYZf(p.x, p.y, p.z);
   }
   return output;
@@ -185,9 +194,9 @@ PointCloud2ToForm(const sensor_msgs::msg::PointCloud2::ConstSharedPtr &msg,
 
   // Catch some potential edge cases with bad values
   if (n_points > num_columns * num_rows) {
-    throw std::runtime_error(
-        "PointCloud2 has more points than expected from num_rows and num_columns. "
-        "Please check your parameters.");
+    std::cerr << "Warning: PointCloud2 has more points than expected from num_rows "
+                 "and num_columns. Please check your parameters."
+              << std::endl;
   }
 
   // Infer properties of the cloud

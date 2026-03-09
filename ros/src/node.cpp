@@ -50,8 +50,6 @@ gtsam::Pose3 LookupTransform(const std::string &target_frame,
 
 namespace form_ros {
 
-using utils::FeatsToPointCloud2;
-
 EstimatorNode::EstimatorNode(const rclcpp::NodeOptions &options)
     : rclcpp::Node("form_node", options) {
   // clang-format off
@@ -136,8 +134,6 @@ void EstimatorNode::register_frame(
       form_ros::PointCloud2ToForm(msg, estimator_.m_params.extraction.num_rows,
                                   estimator_.m_params.extraction.num_columns);
 
-  std::cout << "Received scan with " << points.size() << " points" << std::endl;
-
   // Register frame with FORM
   const auto &[planar_kp, point_kp] = estimator_.register_scan(points);
 
@@ -153,9 +149,10 @@ void EstimatorNode::register_frame(
     publish_clouds(planar_kp, planar_publisher_, msg->header);
     publish_clouds(point_kp, point_publisher_, msg->header);
     // current map
-    const auto [map_planar, map_point] = estimator_.current_map();
-    publish_clouds(map_planar, map_planar_publisher_, msg->header);
-    publish_clouds(map_point, map_point_publisher_, msg->header);
+    // TODO: Need to figure out correct base frames for these map clouds
+    // const auto [map_planar, map_point] = estimator_.current_map();
+    // publish_clouds(map_planar, map_planar_publisher_, msg->header);
+    // publish_clouds(map_point, map_point_publisher_, msg->header);
   }
 }
 
