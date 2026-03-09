@@ -1,4 +1,6 @@
 // Adapted from evalio's pc2_conversions.h
+// https://github.com/contagon/evalio/blob/main/cpp/bindings/ros_pc2.h
+//
 // Converts ROS PointCloud2 messages into organized form::PointXYZf vectors
 // (row-major, num_rows * num_columns) suitable for FORM's feature extraction.
 #pragma once
@@ -12,9 +14,8 @@
 #include <string>
 #include <vector>
 
+#include <form/utils.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
-
-#include "form/utils.hpp"
 
 namespace form_ros {
 
@@ -80,79 +81,71 @@ template <typename T> std::function<void(T &, const uint8_t *)> blank() {
   return [](T &, const uint8_t *) noexcept {};
 }
 
-// ----------------------------- Intermediate point ----------------------------- //
+// ------------------------- Reordering Helpers ------------------------- //
 // Holds parsed per-point data before reordering into the organized grid.
 struct RawPoint {
-  float x = 0.0f, y = 0.0f, z = 0.0f;
+  float x = 0.0f;
+  float y = 0.0f;
+  float z = 0.0f;
   uint8_t row = 0;
   uint16_t col = 0;
 };
 
-// ----------------------------- Column filling ----------------------------- //
-// Fill the column index for points that arrive in row-major order
-// (each row's points are contiguous; column resets when row changes).
-inline void fill_col_row_major(std::vector<RawPoint> &pts) {
-  if (pts.empty())
-    return;
-  pts[0].col = 0;
-  for (size_t i = 1; i < pts.size(); ++i) {
-    if (pts[i].row != pts[i - 1].row)
-      pts[i].col = 0;
-    else
-      pts[i].col = pts[i - 1].col + 1;
+// Iterates through points to fill in columns
+inline void
+_fill_col(std::vector<RawPoint> &mm,
+          std::function<void(uint16_t &col, const uint16_t &prev_col,
+                             const uint8_t &prev_row, const uint8_t &curr_row)>
+              func_col) {
+  // fill out the first one to kickstart
+  uint16_t prev_col = 0;
+  uint8_t prev_row = mm[0].row;
+  for (auto p = mm.begin() + 1; p != mm.end(); ++p) {
+    func_col(p->col, prev_col, prev_row, p->row);
+    prev_col = p->col;
+    prev_row = p->row;
   }
 }
 
-// Fill the column index for points that arrive in column-major order
-// (column increments when the row wraps around to a smaller value).
-inline void fill_col_col_major(std::vector<RawPoint> &pts) {
-  if (pts.empty())
-    return;
-  pts[0].col = 0;
-  for (size_t i = 1; i < pts.size(); ++i) {
-    if (pts[i].row < pts[i - 1].row)
-      pts[i].col = pts[i - 1].col + 1;
-    else
-      pts[i].col = pts[i - 1].col;
-  }
-}
-
-// ----------------------------- Reorder into organized grid
-// ----------------------------- // Place parsed points into a row-major grid of size
-// (num_rows x num_columns). Points that fall outside the grid are silently dropped;
-// gaps are filled with (0,0,0).
-inline std::vector<form::PointXYZf> reorder_points(const std::vector<RawPoint> &pts,
-                                                   int num_rows, int num_columns) {
-  const size_t total =
-      static_cast<size_t>(num_rows) * static_cast<size_t>(num_columns);
-  std::vector<form::PointXYZf> organized(total, form::PointXYZf(0.0f, 0.0f, 0.0f));
-
-  for (const auto &p : pts) {
-    if (p.row < num_rows && p.col < num_columns) {
-      const size_t idx =
-          static_cast<size_t>(p.row) * static_cast<size_t>(num_columns) +
-          static_cast<size_t>(p.col);
-      organized[idx] = form::PointXYZf(p.x, p.y, p.z);
+// Fills in column index for row major order
+inline void fill_col_row_major(std::vector<RawPoint> &mm) {
+  auto func_col = [](uint16_t &col, const uint16_t &prev_col,
+                     const uint8_t &prev_row, const uint8_t &curr_row) {
+    if (prev_row != curr_row) {
+      col = 0;
+    } else {
+      col = prev_col + 1;
     }
-  }
-  return organized;
+  };
+
+  _fill_col(mm, func_col);
 }
 
-// ----------------------------- Main conversion ----------------------------- //
-/// Convert a ROS PointCloud2 message into an organized vector of form::PointXYZf
-/// in row-major order (size = num_rows * num_columns).
-///
-/// The function inspects the PointCloud2 fields to find:
-///   - x, y, z       (required)
-///   - ring/row/channel  (required for reordering)
-///
-/// Points are then reordered into a (num_rows x num_columns) grid using column
-/// indices inferred from point ordering (row-major by default).
-///
-/// @param msg         The incoming PointCloud2 message
-/// @param num_rows    Number of LiDAR scan lines
-/// @param num_columns Number of points per scan line
-/// @return Organized point cloud as vector<PointXYZf> of size num_rows * num_columns
+// Fills in column index for column major order
+inline void fill_col_col_major(std::vector<RawPoint> &mm) {
+  auto func_col = [](uint16_t &col, const uint16_t &prev_col,
+                     const uint8_t &prev_row, const uint8_t &curr_row) {
+    if (curr_row < prev_row) {
+      col = prev_col + 1;
+    } else {
+      col = prev_col;
+    }
+  };
+
+  _fill_col(mm, func_col);
+}
+
+inline std::vector<form::PointXYZf>
+reorder_points(std::vector<RawPoint> &mm, size_t num_rows, size_t num_cols) {
+  std::vector<form::PointXYZf> output(mm.size(), form::PointXYZf(0.0f, 0.0f, 0.0f));
+
+  for (auto p : mm) {
+    output[p.row * num_cols + p.col] = form::PointXYZf(p.x, p.y, p.z);
+  }
+  return output;
+}
+
+// ------------------------- Main Conversion ------------------------- //
 inline std::vector<form::PointXYZf>
 PointCloud2ToForm(const sensor_msgs::msg::PointCloud2::ConstSharedPtr &msg,
                   int num_rows, int num_columns) {
@@ -160,8 +153,7 @@ PointCloud2ToForm(const sensor_msgs::msg::PointCloud2::ConstSharedPtr &msg,
     throw std::runtime_error("Big-endian PointCloud2 is not supported");
   }
 
-  const size_t n_points =
-      static_cast<size_t>(msg->width) * static_cast<size_t>(msg->height);
+  const int n_points = static_cast<int>(msg->width) * static_cast<int>(msg->height);
 
   // Build field accessors
   std::function func_x = blank<float>();
@@ -191,10 +183,24 @@ PointCloud2ToForm(const sensor_msgs::msg::PointCloud2::ConstSharedPtr &msg,
     func_row(raw[i].row, pt);
   }
 
-  // Infer column indices (row-major ordering)
-  fill_col_row_major(raw);
+  // Catch some potential edge cases with bad values
+  if (n_points > num_columns * num_rows) {
+    throw std::runtime_error(
+        "PointCloud2 has more points than expected from num_rows and num_columns. "
+        "Please check your parameters.");
+  }
 
-  // Reorder into organized grid
+  // Infer properties of the cloud
+  bool all_points_present = (n_points == num_rows * num_columns);
+  bool row_major = raw[0].row == raw[1].row;
+
+  // Fill out column indices based on inferred ordering
+  if (row_major) {
+    fill_col_row_major(raw);
+  } else {
+    fill_col_col_major(raw);
+  }
+
   return reorder_points(raw, num_rows, num_columns);
 }
 

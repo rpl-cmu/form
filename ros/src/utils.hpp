@@ -8,7 +8,6 @@
 #pragma once
 
 #include <Eigen/Core>
-#include <algorithm>
 #include <cstddef>
 #include <memory>
 #include <regex>
@@ -25,9 +24,6 @@
 #include <rclcpp/logging.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <sensor_msgs/point_cloud2_iterator.hpp>
-
-#include "form/feature/features.hpp"
-#include "form/utils.hpp"
 
 namespace tf2 {
 
@@ -81,45 +77,38 @@ inline std::string FixFrameId(const std::string &frame_id) {
   return std::regex_replace(frame_id, std::regex("^/"), "");
 }
 
-inline std::unique_ptr<PointCloud2> CreatePointCloud2Msg(const size_t n_points,
-                                                         const Header &header) {
-  auto cloud_msg = std::make_unique<PointCloud2>();
-  sensor_msgs::PointCloud2Modifier modifier(*cloud_msg);
-  cloud_msg->header = header;
-  cloud_msg->header.frame_id = FixFrameId(cloud_msg->header.frame_id);
-  cloud_msg->fields.clear();
+template <typename Point>
+inline std::unique_ptr<PointCloud2>
+FeatsToPointCloud2(const std::vector<Point> &points, const Header &header) {
+  // ------------------------- Setup PC2 Message ------------------------- //
+  auto msg = std::make_unique<PointCloud2>();
+  sensor_msgs::PointCloud2Modifier modifier(*msg);
+  msg->header = header;
+  msg->header.frame_id = FixFrameId(msg->header.frame_id);
+  msg->fields.clear();
   int offset = 0;
-  offset = addPointField(*cloud_msg, "x", 1, PointField::FLOAT32, offset);
-  offset = addPointField(*cloud_msg, "y", 1, PointField::FLOAT32, offset);
-  offset = addPointField(*cloud_msg, "z", 1, PointField::FLOAT32, offset);
+  offset = addPointField(*msg, "x", 1, PointField::FLOAT32, offset);
+  offset = addPointField(*msg, "y", 1, PointField::FLOAT32, offset);
+  offset = addPointField(*msg, "z", 1, PointField::FLOAT32, offset);
   offset += sizeOfPointField(PointField::FLOAT32);
 
   // Resize the point cloud accordingly
-  cloud_msg->point_step = offset;
-  cloud_msg->row_step = cloud_msg->width * cloud_msg->point_step;
-  cloud_msg->data.resize(cloud_msg->height * cloud_msg->row_step);
-  modifier.resize(n_points);
-  return cloud_msg;
-}
+  msg->point_step = offset;
+  msg->row_step = msg->width * msg->point_step;
+  msg->data.resize(msg->height * msg->row_step);
+  modifier.resize(points.size());
 
-template <typename PointT>
-inline void FillPointCloud2XYZ(const std::vector<PointT> &points, PointCloud2 &msg) {
-  sensor_msgs::PointCloud2Iterator<float> msg_x(msg, "x");
-  sensor_msgs::PointCloud2Iterator<float> msg_y(msg, "y");
-  sensor_msgs::PointCloud2Iterator<float> msg_z(msg, "z");
+  // ------------------------- Fill Point Cloud ------------------------- //
+  sensor_msgs::PointCloud2Iterator<float> msg_x(*msg, "x");
+  sensor_msgs::PointCloud2Iterator<float> msg_y(*msg, "y");
+  sensor_msgs::PointCloud2Iterator<float> msg_z(*msg, "z");
   for (size_t i = 0; i < points.size(); i++, ++msg_x, ++msg_y, ++msg_z) {
     const auto &point = points[i];
     *msg_x = static_cast<float>(point.x);
     *msg_y = static_cast<float>(point.y);
     *msg_z = static_cast<float>(point.z);
   }
-}
 
-template <typename PointT>
-inline std::unique_ptr<PointCloud2>
-FeatsToPointCloud2(const std::vector<PointT> &points, const Header &header) {
-  auto msg = CreatePointCloud2Msg(points.size(), header);
-  FillPointCloud2XYZ(points, *msg);
   return msg;
 }
 

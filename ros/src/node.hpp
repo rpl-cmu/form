@@ -9,6 +9,7 @@
 
 // FORM
 #include "form/form.hpp"
+#include "utils.hpp"
 
 // ROS 2
 #include <tf2_ros/buffer.h>
@@ -31,7 +32,7 @@ public:
 
 private:
   /// Register new frame
-  void RegisterFrame(const sensor_msgs::msg::PointCloud2::ConstSharedPtr &msg);
+  void register_frame(const sensor_msgs::msg::PointCloud2::ConstSharedPtr &msg);
 
   /// Stream the estimated pose to ROS
   void publish_odometry(const gtsam::Pose3 &pose,
@@ -42,7 +43,9 @@ private:
   void publish_clouds(
       const std::vector<Point> &points,
       rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr publisher,
-      const std_msgs::msg::Header &header);
+      const std_msgs::msg::Header &header) {
+    publisher->publish(std::move(FeatsToPointCloud2(points, header)));
+  }
 
 private:
   /// Tools for broadcasting TFs.

@@ -10,9 +10,9 @@
 #include <vector>
 
 // FORM-ROS
-#include "Utils.hpp"
 #include "node.hpp"
-#include "pc2_conversions.h"
+#include "ros_pc2.h"
+#include "utils.hpp"
 
 // FORM
 #include "form/form.hpp"
@@ -61,7 +61,6 @@ EstimatorNode::EstimatorNode(const rclcpp::NodeOptions &options)
   lidar_odom_frame_ = declare_parameter<std::string>("lidar_odom_frame", lidar_odom_frame_);
   publish_odom_tf_  = declare_parameter<bool>("publish_odom_tf", true);
   invert_odom_tf_   = declare_parameter<bool>("invert_odom_tf", true);
-  // TODO: It would be great to pull these out of marginals from FORM directly!
   publish_debug_clouds_   = declare_parameter<bool>("publish_debug_clouds", false);
   position_covariance_    = declare_parameter<double>("position_covariance", 0.1);
   orientation_covariance_ = declare_parameter<double>("orientation_covariance", 0.1);
@@ -107,7 +106,7 @@ EstimatorNode::EstimatorNode(const rclcpp::NodeOptions &options)
   // Initialize subscribers
   pointcloud_sub_ = create_subscription<sensor_msgs::msg::PointCloud2>(
       "pointcloud_topic", rclcpp::SensorDataQoS(),
-      std::bind(&EstimatorNode::RegisterFrame, this, std::placeholders::_1));
+      std::bind(&EstimatorNode::register_frame, this, std::placeholders::_1));
 
   // Initialize publishers
   rclcpp::QoS qos((rclcpp::SystemDefaultsQoS().keep_last(1).durability_volatile()));
@@ -130,13 +129,14 @@ EstimatorNode::EstimatorNode(const rclcpp::NodeOptions &options)
   // clang-format on
 }
 
-void EstimatorNode::RegisterFrame(
+void EstimatorNode::register_frame(
     const sensor_msgs::msg::PointCloud2::ConstSharedPtr &msg) {
   // Convert PointCloud2 -> organized vector<PointXYZf> using pc2_conversions
-  // TODO: This conversion needs a bunch of work to make sure it's robust
   const auto points =
       form_ros::PointCloud2ToForm(msg, estimator_.m_params.extraction.num_rows,
                                   estimator_.m_params.extraction.num_columns);
+
+  std::cout << "Received scan with " << points.size() << " points" << std::endl;
 
   // Register frame with FORM
   const auto &[planar_kp, point_kp] = estimator_.register_scan(points);
@@ -207,13 +207,6 @@ void EstimatorNode::publish_odometry(const gtsam::Pose3 &form_pose,
   odom_publisher_->publish(std::move(odom_msg));
 }
 
-template <typename Point>
-void publish_clouds(
-    const std::vector<Point> &points,
-    rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr publisher,
-    const std_msgs::msg::Header &header) {
-  publisher->publish(std::move(FeatsToPointCloud2(points, header)));
-}
 } // namespace form_ros
 
 #include "rclcpp_components/register_node_macro.hpp"
