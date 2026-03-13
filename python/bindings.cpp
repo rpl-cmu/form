@@ -82,7 +82,7 @@ public:
     (int,     max_num_recent_scans,  10, params_.scans.max_num_recent_scans),
     (int, max_steps_unused_keyscan,  10, params_.scans.max_steps_unused_keyscan),
     (double,    keyscan_match_ratio, 0.1, params_.scans.keyscan_match_ratio),
-    (double,           max_dist_map, 0.1, params_.map.min_dist_map),
+    (double,           min_dist_map, 0.1, params_.map.min_dist_map),
     // misc
     (int, num_threads, 0, params_.num_threads)
   );

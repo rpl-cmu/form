@@ -38,7 +38,7 @@ class config:
     max_num_recent_scans: int = 10
     max_steps_unused_keyscan: int = 10
     keyscan_match_ratio: float = 0.1
-    max_dist_map: float = 0.1
+    min_dist_map: float = 0.1
 
     # Misc
     num_threads: int = 0
@@ -56,7 +56,9 @@ def make_config(
 ):
     launch_args.append(
         DeclareLaunchArgument(
-            name=name, default_value=str(default), description=description
+            name=name,
+            default_value=None if default is None else str(default),
+            description=description,
         )
     )
     return LaunchConfiguration(name, default=default)
@@ -121,7 +123,7 @@ def generate_launch_description():
                 "max_num_recent_scans": config.max_num_recent_scans,
                 "max_steps_unused_keyscan": config.max_steps_unused_keyscan,
                 "keyscan_match_ratio": config.keyscan_match_ratio,
-                "max_dist_map": config.max_dist_map,
+                "min_dist_map": config.min_dist_map,
                 # Misc
                 "num_threads": config.num_threads,
                 # Fixed covariances

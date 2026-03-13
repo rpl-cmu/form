@@ -22,8 +22,8 @@
 #pragma once
 
 #include "form/mapping/map.hpp"
-#include <tbb/concurrent_vector.h>
 #include <numeric>
+#include <tbb/concurrent_vector.h>
 
 namespace form {
 
@@ -180,10 +180,10 @@ void KeypointMap<Point>::insert_matches(
   const ScanIndex scan_j = matches.front().query.scan;
   auto &keypoints = get(scan_j);
 
-  double max_dist_map_sqrd = m_params.min_dist_map * m_params.min_dist_map;
+  double min_dist_map_sqrd = m_params.min_dist_map * m_params.min_dist_map;
 
   for (const auto &match : matches) {
-    if (match.dist_sqrd > max_dist_map_sqrd) {
+    if (match.dist_sqrd > min_dist_map_sqrd) {
       keypoints.push_back(match.query);
     }
   }

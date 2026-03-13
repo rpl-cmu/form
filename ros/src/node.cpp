@@ -70,7 +70,6 @@ EstimatorNode::EstimatorNode(const rclcpp::NodeOptions &options)
   params.extraction.num_columns = declare_parameter<int>("num_columns", params.extraction.num_columns);
   auto min_range = declare_parameter<double>("min_range", 1.0);
   auto max_range = declare_parameter<double>("max_range", 100.0);
-  std::cout << "Min range: " << min_range << ", Max range: " << max_range << std::endl;
   params.extraction.min_norm_squared = min_range * min_range;
   params.extraction.max_norm_squared = max_range * max_range;
 
@@ -97,7 +96,7 @@ EstimatorNode::EstimatorNode(const rclcpp::NodeOptions &options)
   params.scans.max_num_recent_scans     = declare_parameter<int>("max_num_recent_scans", params.scans.max_num_recent_scans);
   params.scans.max_steps_unused_keyscan = declare_parameter<int>("max_steps_unused_keyscan", params.scans.max_steps_unused_keyscan);
   params.scans.keyscan_match_ratio      = declare_parameter<double>("keyscan_match_ratio", params.scans.keyscan_match_ratio);
-  params.map.min_dist_map               = declare_parameter<double>("max_dist_map", params.map.min_dist_map);
+  params.map.min_dist_map               = declare_parameter<double>("min_dist_map", params.map.min_dist_map);
 
   // Misc
   params.num_threads = declare_parameter<int>("num_threads", params.num_threads);

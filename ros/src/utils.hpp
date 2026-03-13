@@ -83,10 +83,10 @@ inline std::unique_ptr<PointCloud2>
 FeatsToPointCloud2(const std::vector<Point> &points, const Header &header) {
   // ------------------------- Setup PC2 Message ------------------------- //
   auto msg = std::make_unique<PointCloud2>();
-  sensor_msgs::PointCloud2Modifier modifier(*msg);
   msg->header = header;
   msg->header.frame_id = FixFrameId(msg->header.frame_id);
   msg->fields.clear();
+
   int offset = 0;
   offset = addPointField(*msg, "x", 1, PointField::FLOAT32, offset);
   offset = addPointField(*msg, "y", 1, PointField::FLOAT32, offset);
@@ -94,10 +94,12 @@ FeatsToPointCloud2(const std::vector<Point> &points, const Header &header) {
   offset += sizeOfPointField(PointField::FLOAT32);
 
   // Resize the point cloud accordingly
+  msg->width = points.size();
+  msg->height = 1;
   msg->point_step = offset;
+
   msg->row_step = msg->width * msg->point_step;
   msg->data.resize(msg->height * msg->row_step);
-  modifier.resize(points.size());
 
   // ------------------------- Fill Point Cloud ------------------------- //
   sensor_msgs::PointCloud2Iterator<float> msg_x(*msg, "x");
