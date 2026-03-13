@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <cstring>
 #include <functional>
+#include <iostream>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -170,15 +171,35 @@ PointCloud2ToForm(const sensor_msgs::msg::PointCloud2::ConstSharedPtr &msg,
   std::function func_z = blank<float>();
   std::function func_row = blank<uint8_t>();
 
+  bool has_x = false;
+  bool has_y = false;
+  bool has_z = false;
+  bool has_row = false;
+
   for (const auto &field : msg->fields) {
-    if (field.name == "x")
+    if (field.name == "x") {
       func_x = data_getter<float>(field.datatype, field.offset);
-    else if (field.name == "y")
+      has_x = true;
+    } else if (field.name == "y") {
       func_y = data_getter<float>(field.datatype, field.offset);
-    else if (field.name == "z")
+      has_y = true;
+    } else if (field.name == "z") {
       func_z = data_getter<float>(field.datatype, field.offset);
-    else if (field.name == "ring" || field.name == "row" || field.name == "channel")
+      has_z = true;
+    } else if (field.name == "ring" || field.name == "row" || field.name == "channel") {
       func_row = data_getter<uint8_t>(field.datatype, field.offset);
+      has_row = true;
+    }
+  }
+
+  // Validate that all required fields were found
+  if (!has_x || !has_y || !has_z) {
+    throw std::runtime_error(
+        "PointCloud2ToForm: Missing required point fields; expected fields 'x', 'y', and 'z'.");
+  }
+  if (!has_row) {
+    throw std::runtime_error(
+        "PointCloud2ToForm: Missing required row indicator field; expected one of 'ring', 'row', or 'channel'.");
   }
 
   // Parse all points
@@ -201,7 +222,10 @@ PointCloud2ToForm(const sensor_msgs::msg::PointCloud2::ConstSharedPtr &msg,
 
   // Infer properties of the cloud
   bool all_points_present = (n_points == num_rows * num_columns);
-  bool row_major = raw[0].row == raw[1].row;
+  bool row_major = true;
+  if (n_points >= 2) {
+    row_major = (raw[0].row == raw[1].row);
+  }
 
   // Fill out column indices based on inferred ordering
   if (row_major) {

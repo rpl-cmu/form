@@ -88,6 +88,10 @@ EstimatorNode::EstimatorNode(const rclcpp::NodeOptions &options)
   params.matcher.new_pose_threshold = declare_parameter<double>("new_pose_threshold", params.matcher.new_pose_threshold);
   params.matcher.max_num_rematches  = declare_parameter<int>("max_num_rematches", params.matcher.max_num_rematches);
 
+  // Constraints
+  params.constraints.disable_smoothing =
+      declare_parameter<bool>("disable_smoothing", params.constraints.disable_smoothing);
+
   // Mapping
   params.scans.max_num_keyscans         = declare_parameter<int>("max_num_keyscans", params.scans.max_num_keyscans);
   params.scans.max_num_recent_scans     = declare_parameter<int>("max_num_recent_scans", params.scans.max_num_recent_scans);
@@ -161,7 +165,7 @@ void EstimatorNode::publish_odometry(const gtsam::Pose3 &form_pose,
                                      const std_msgs::msg::Header &header) {
   // If necessary, transform the ego-centric pose to the specified
   // base_link/base_footprint frame
-  const auto cloud_frame_id = header.frame_id;
+  const auto cloud_frame_id = utils::FixFrameId(header.frame_id);
   const auto egocentric_estimation =
       (base_frame_.empty() || base_frame_ == cloud_frame_id);
   const auto moving_frame = egocentric_estimation ? cloud_frame_id : base_frame_;

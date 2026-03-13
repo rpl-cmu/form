@@ -90,4 +90,4 @@ ros2 <your command>
 If you have the oxford spires dataset installed using [evalio](https://github.com/contagon/evalio/tree/master), you can use the following commands to launch and run a trajectory from it,
 ```sh
 pixi run oxford
-``
+```

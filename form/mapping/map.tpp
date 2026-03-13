@@ -23,6 +23,7 @@
 
 #include "form/mapping/map.hpp"
 #include <tbb/concurrent_vector.h>
+#include <numeric>
 
 namespace form {
 
@@ -151,7 +152,7 @@ KeypointMap<Point>::to_vector(const gtsam::Values &values) const noexcept {
   // Create a new map
   std::vector<Point> world_map;
   auto num_points = std::accumulate(
-      m_scan_keypoints.begin(), m_scan_keypoints.end(), 0,
+      m_scan_keypoints.begin(), m_scan_keypoints.end(), size_t{0},
       [](size_t sum, const auto &pair) { return sum + pair.second.size(); });
   world_map.reserve(num_points);
 
