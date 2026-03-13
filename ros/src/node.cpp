@@ -7,7 +7,6 @@
 // Stachniss)
 #include <memory>
 #include <utility>
-#include <vector>
 
 // FORM-ROS
 #include "node.hpp"
@@ -71,6 +70,7 @@ EstimatorNode::EstimatorNode(const rclcpp::NodeOptions &options)
   params.extraction.num_columns = declare_parameter<int>("num_columns", params.extraction.num_columns);
   auto min_range = declare_parameter<double>("min_range", 1.0);
   auto max_range = declare_parameter<double>("max_range", 100.0);
+  std::cout << "Min range: " << min_range << ", Max range: " << max_range << std::endl;
   params.extraction.min_norm_squared = min_range * min_range;
   params.extraction.max_norm_squared = max_range * max_range;
 
@@ -149,10 +149,11 @@ void EstimatorNode::register_frame(
     publish_clouds(planar_kp, planar_publisher_, msg->header);
     publish_clouds(point_kp, point_publisher_, msg->header);
     // current map
-    // TODO: Need to figure out correct base frames for these map clouds
-    // const auto [map_planar, map_point] = estimator_.current_map();
-    // publish_clouds(map_planar, map_planar_publisher_, msg->header);
-    // publish_clouds(map_point, map_point_publisher_, msg->header);
+    const auto [map_planar, map_point] = estimator_.current_map();
+    auto local_map_header = msg->header;
+    local_map_header.frame_id = lidar_odom_frame_;
+    publish_clouds(map_planar, map_planar_publisher_, local_map_header);
+    publish_clouds(map_point, map_point_publisher_, local_map_header);
   }
 }
 

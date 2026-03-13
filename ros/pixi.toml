@@ -10,6 +10,7 @@ scripts = ["install/setup.sh"]
 
 [tasks]
 build = "colcon build --event-handlers console_direct+"
+oxford = "ros2 launch form odometry.launch.py bagfile:=$EVALIO_DATA/oxford_spires/blenheim_palace_01 topic:=/hesai/pandar num_rows:=64 num_columns:=1200 max_range:=60.0"
 
 [dependencies]
 ros-jazzy-ros-base = ">=0.11.0,<0.12"

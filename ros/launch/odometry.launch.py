@@ -4,8 +4,9 @@
 #
 # Adapted from KISS-ICP launch file
 # (Copyright (c) 2022 Ignacio Vizzo, Tiziano Guadagnino, Benedikt Mersch, Cyrill Stachniss)
+from typing import Any
 from launch import LaunchDescription
-from launch.actions import ExecuteProcess
+from launch.actions import DeclareLaunchArgument, ExecuteProcess
 from launch.conditions import IfCondition
 from launch.substitutions import (
     LaunchConfiguration,
@@ -17,12 +18,6 @@ from launch_ros.substitutions import FindPackageShare
 
 
 class config:
-    # LiDAR geometry
-    num_rows: int = 64
-    num_columns: int = 1024
-    min_range: float = 1.0
-    max_range: float = 100.0
-
     # Feature extraction
     neighbor_points: int = 5
     num_sectors: int = 6
@@ -53,21 +48,39 @@ class config:
     orientation_covariance: float = 0.1
 
 
+def make_config(
+    launch_args: list[DeclareLaunchArgument],
+    name: str,
+    description: str,
+    default: Any | None = None,
+):
+    launch_args.append(
+        DeclareLaunchArgument(
+            name=name, default_value=str(default), description=description
+        )
+    )
+    return LaunchConfiguration(name, default=default)
+
+
 def generate_launch_description():
-    use_sim_time = LaunchConfiguration("use_sim_time", default="true")
-
-    # ROS configuration
-    pointcloud_topic = LaunchConfiguration("topic")
-    visualize = LaunchConfiguration("visualize", default="true")
-
-    # Optional ros bag play
-    bagfile = LaunchConfiguration("bagfile", default="")
-
+    la = []
+    # fmt: off
+    topic = make_config(la, "topic",            "Input point cloud topic")
+    # lidar geometry config
+    num_columns = make_config(la, "num_columns",      "LiDAR image width (columns)")
+    num_rows    = make_config(la, "num_rows",         "LiDAR image height (rows)")
+    min_range   = make_config(la, "min_range",        "Minimum LiDAR range",                  1.0)
+    max_range   = make_config(la, "max_range",        "Maximum LiDAR range",                  100.0)
+    # optional visualization and rosbag play
+    visualize = make_config(la, "visualize",        "Launch RViz and debug visualization",  True)
+    bagfile   = make_config(la, "bagfile",          "Optional rosbag file/folder to play",  "")
     # tf tree configuration
-    base_frame = LaunchConfiguration("base_frame", default="")
-    lidar_odom_frame = LaunchConfiguration("lidar_odom_frame", default="odom_lidar")
-    publish_odom_tf = LaunchConfiguration("publish_odom_tf", default=True)
-    invert_odom_tf = LaunchConfiguration("invert_odom_tf", default=True)
+    base_frame       = make_config(la, "base_frame",       "Base frame id",                        "")
+    lidar_odom_frame = make_config(la, "lidar_odom_frame", "Odometry frame id",                    "odom_lidar")
+    publish_odom_tf  = make_config(la, "publish_odom_tf",  "Publish odom->base TF",                True)
+    invert_odom_tf   = make_config(la, "invert_odom_tf",   "Invert published odom TF",             True)
+    use_sim_time     = make_config(la, "use_sim_time",     "Use simulation time",                   True)
+    # fmt: on
 
     # FORM node
     form_node = Node(
@@ -76,7 +89,7 @@ def generate_launch_description():
         name="form_node",
         output="screen",
         remappings=[
-            ("pointcloud_topic", pointcloud_topic),
+            ("pointcloud_topic", topic),
         ],
         parameters=[
             {
@@ -86,10 +99,10 @@ def generate_launch_description():
                 "publish_odom_tf": publish_odom_tf,
                 "invert_odom_tf": invert_odom_tf,
                 # LiDAR geometry
-                "num_rows": config.num_rows,
-                "num_columns": config.num_columns,
-                "min_range": config.min_range,
-                "max_range": config.max_range,
+                "num_columns": num_columns,
+                "num_rows": num_rows,
+                "min_range": min_range,
+                "max_range": max_range,
                 # Feature extraction
                 "neighbor_points": config.neighbor_points,
                 "num_sectors": config.num_sectors,
@@ -139,6 +152,7 @@ def generate_launch_description():
 
     return LaunchDescription(
         [
+            *la,
             form_node,
             rviz_node,
             bagfile_play,
