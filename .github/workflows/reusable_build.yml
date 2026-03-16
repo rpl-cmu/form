@@ -23,7 +23,7 @@ jobs:
       - name: Install Dependencies
         run: |
           sudo apt update
-          sudo apt install -y libeigen3-dev libboost-dev libgtsam-dev libtbb-dev
+          sudo apt install -y libeigen3-dev libboost-all-dev libgtsam-dev libtbb-dev
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
