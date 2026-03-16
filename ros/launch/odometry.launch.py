@@ -147,7 +147,18 @@ def generate_launch_description():
     )
 
     bagfile_play = ExecuteProcess(
-        cmd=["ros2", "bag", "play", "--rate", "1", bagfile, "--clock", "1000.0"],
+        cmd=[
+            "ros2",
+            "bag",
+            "play",
+            "--rate",
+            "1",
+            bagfile,
+            "--clock",
+            "1000.0",
+            "--read-ahead-queue-size",
+            "10000",
+        ],
         output="screen",
         condition=IfCondition(PythonExpression(["'", bagfile, "' != ''"])),
     )
