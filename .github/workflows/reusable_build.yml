@@ -28,7 +28,7 @@ jobs:
         name: Checkout
 
       - name: Install vcpkg
-        run: ./.github/scripts/install_vcpkg.sh
+        run: ./.github/scripts/vcpkg.sh
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
