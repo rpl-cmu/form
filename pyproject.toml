@@ -15,21 +15,21 @@ dependencies = [
     "seaborn>=0.13.2",
 ]
 
-[tool.scikit-build]
-minimum-version = "build-system.requires"
-build-dir = "build/{wheel_tag}"
+[dependency-groups]
+dev = ["snakeviz>=2.2.2"]
 
 [build-system]
 requires = ["scikit-build-core>=0.10", "nanobind", "evalio>=0.4"]
 build-backend = "scikit_build_core.build"
 
-[dependency-groups]
-dev = ["snakeviz>=2.2.2"]
+[tool.scikit-build]
+minimum-version = "build-system.requires"
+build-dir = "build/{wheel_tag}"
 
 [tool.scikit-build.cmake.define]
 FORM_BUILD_PYTHON = true
 CMAKE_BUILD_TYPE = "Release"
-# CMAKE_BUILD_TYPE = "RelWithDebInfo"
+VCPKG_INSTALLED_DIR = "./.vcpkg_installed"
 
 [tool.basedpyright]
 typeCheckingMode = "standard"

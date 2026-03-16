@@ -12,6 +12,11 @@
           "path": "ros/pixi.toml",
           "type": "xml",
           "xpath": "//package/version"
+        },
+        {
+          "type": "json",
+          "path": "vcpkg.json",
+          "jsonpath": "$.version"
         }
       ]
     }

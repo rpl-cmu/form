@@ -7,7 +7,14 @@ jobs:
   build:
     runs-on: ${{ matrix.os }}
     env:
-      UV_NO_EDITABLE: true
+      VCPKG_BINARY_SOURCES: ${{ vars.VCPKG_BINARY_SOURCES }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_ENDPOINT_URL: ${{ secrets.AWS_ENDPOINT_URL }}
+      # only required until R2 supports CRC64NVME checksums
+      # https://community.cloudflare.com/t/an-error-occurred-internalerror-when-calling-the-putobject-operation/764905/11
+      AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+      AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
     strategy:
       fail-fast: false
       matrix:
@@ -20,10 +27,8 @@ jobs:
       - uses: actions/checkout@v4
         name: Checkout
 
-      - name: Install Dependencies
-        run: |
-          sudo apt update
-          sudo apt install -y libeigen3-dev libboost-all-dev libcppunit-dev libgtsam-dev libtbb-dev
+      - name: Install vcpkg
+        run: ./.github/scripts/install_vcpkg.sh
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
