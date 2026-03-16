@@ -1,0 +1,30 @@
+name: "Build Python package"
+
+on:
+  workflow_call:
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    env:
+      UV_NO_EDITABLE: true
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+        python-version:
+          - "3.11"
+          - "3.14"
+    steps:
+      - uses: actions/checkout@v4
+        name: Checkout
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          enable-cache: true
+
+      - name: Build and install the project
+        run: uv sync --verbose

@@ -1,0 +1,46 @@
+name: Main
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  # Release Please to create releases
+  release:
+    name: Release Please
+    runs-on: ubuntu-latest
+    outputs:
+      # fromJSON to convert string "true"/"false" to boolean
+      # https://github.com/googleapis/release-please-action/issues/912#issuecomment-2024459449
+      releases_created: ${{ steps.release.outputs.releases_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+    steps:
+      - uses: googleapis/release-please-action@v4
+        id: release
+        with:
+          config-file: .github/release-please-config.json
+          manifest-file: .github/.release-please-manifest.json
+          token: ${{ secrets.RELEASE_PLEASE_GITHUB_TOKEN }}
+
+  # Always run checks
+  checks:
+    name: Checks
+    uses: ./.github/workflows/reusable_checks.yml
+    secrets: inherit
+
+  # Build main Python package
+  build:
+    name: Build
+    uses: ./.github/workflows/reusable_build.yml
+    secrets: inherit
+
+  # Build ROS 2 package
+  build_ros:
+    name: Build ROS
+    uses: ./.github/workflows/reusable_build_ros.yml
+    secrets: inherit

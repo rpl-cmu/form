@@ -1,0 +1,20 @@
+{
+  "packages": {
+    ".": {
+      "changelog-path": "CHANGELOG.md",
+      "release-type": "python",
+      "bump-minor-pre-major": true,
+      "bump-patch-for-minor-pre-major": true,
+      "extra-files": [
+        "ros/pixi.toml",
+        "CMakeLists.txt",
+        {
+          "path": "ros/pixi.toml",
+          "type": "xml",
+          "xpath": "//package/version"
+        }
+      ]
+    }
+  },
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json"
+}
