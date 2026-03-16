@@ -186,7 +186,8 @@ PointCloud2ToForm(const sensor_msgs::msg::PointCloud2::ConstSharedPtr &msg,
     } else if (field.name == "z") {
       func_z = data_getter<float>(field.datatype, field.offset);
       has_z = true;
-    } else if (field.name == "ring" || field.name == "row" || field.name == "channel") {
+    } else if (field.name == "ring" || field.name == "row" ||
+               field.name == "channel") {
       func_row = data_getter<uint8_t>(field.datatype, field.offset);
       has_row = true;
     }
@@ -194,12 +195,12 @@ PointCloud2ToForm(const sensor_msgs::msg::PointCloud2::ConstSharedPtr &msg,
 
   // Validate that all required fields were found
   if (!has_x || !has_y || !has_z) {
-    throw std::runtime_error(
-        "PointCloud2ToForm: Missing required point fields; expected fields 'x', 'y', and 'z'.");
+    throw std::runtime_error("PointCloud2ToForm: Missing required point fields; "
+                             "expected fields 'x', 'y', and 'z'.");
   }
   if (!has_row) {
-    throw std::runtime_error(
-        "PointCloud2ToForm: Missing required row indicator field; expected one of 'ring', 'row', or 'channel'.");
+    throw std::runtime_error("PointCloud2ToForm: Missing required row indicator "
+                             "field; expected one of 'ring', 'row', or 'channel'.");
   }
 
   // Parse all points

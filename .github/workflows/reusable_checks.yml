@@ -24,4 +24,4 @@ jobs:
       - uses: jidicula/clang-format-action@v4.14.0
         name: Clang-Format
         with:
-          clang-format-version: '20'
+          clang-format-version: '22'
