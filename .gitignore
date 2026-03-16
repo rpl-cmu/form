@@ -5,9 +5,14 @@ build*
 *.egg-info
 compile_commands.json
 
+# ros env
+install
+log
+
 # vscode environments
 .vscode
 .envrc
+.clangd
 
 .helix
 
@@ -25,8 +30,8 @@ __pycache__
 evalio_results
 *.pyi
 
-*.png
 
 # final outputs
+*.png
 figures
-graphics
+graphics*
