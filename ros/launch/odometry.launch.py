@@ -49,7 +49,7 @@ class config:
 
 
 def make_config(
-    launch_args: list[DeclareLaunchArgument],
+    launch_args: "list[DeclareLaunchArgument]",
     name: str,
     description: str,
     default: Any | None = None,
@@ -81,7 +81,7 @@ def generate_launch_description():
     lidar_odom_frame = make_config(la, "lidar_odom_frame", "Odometry frame id",                    "odom_lidar")
     publish_odom_tf  = make_config(la, "publish_odom_tf",  "Publish odom->base TF",                True)
     invert_odom_tf   = make_config(la, "invert_odom_tf",   "Invert published odom TF",             True)
-    use_sim_time     = make_config(la, "use_sim_time",     "Use simulation time",                   True)
+    use_sim_time     = make_config(la, "use_sim_time",     "Use simulation time",                  True)
     # fmt: on
 
     # FORM node

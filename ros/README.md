@@ -3,7 +3,7 @@
 This ROS 2 node is based on the [KISS-ICP](https://github.com/PRBonn/kiss-icp) ROS 2 wrapper.
 Thanks to the KISS-ICP developers for their clean and well-structured ROS node implementation.
 
-### How to build
+### Building
 
 You will need the same dependencies as FORM (most of which are available as ROS packages),
 - [eigen3](https://libeigen.gitlab.io/eigen/docs-nightly/)
@@ -19,7 +19,7 @@ colcon build
 source ./install/setup.bash
 ```
 
-### How to run
+### Running
 
 The main launch file is `odometry.launch.py` which will launch the odometry node. FORM has three required inputs, **topic name**, **number of scanlines/rings/columns**, and **number of rows/circular count**. This last two are required for FORM's feature extraction.
 
@@ -73,7 +73,7 @@ NOTE: If your point cloud is row major and has dropped invalid points, there is 
 
 We're not huge fans of installing ROS2 system wide, so this folder is setup to install all dependencies using [pixi](https://pixi.prefix.dev/latest/) and [robostack](https://robostack.github.io/index.html).
 
-Install pixi, then building is all done in a single command
+Install pixi, then building is all done in a single command from the `ros/` directory
 ```sh
 pixi run build
 source install/setup.sh
