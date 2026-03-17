@@ -1,0 +1,40 @@
+name: "Build Python package"
+
+on:
+  workflow_call:
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    env:
+      VCPKG_BINARY_SOURCES: ${{ vars.VCPKG_BINARY_SOURCES }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_ENDPOINT_URL: ${{ secrets.AWS_ENDPOINT_URL }}
+      # only required until R2 supports CRC64NVME checksums
+      # https://community.cloudflare.com/t/an-error-occurred-internalerror-when-calling-the-putobject-operation/764905/11
+      AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+      AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+        python-version:
+          - "3.11"
+          - "3.14"
+    steps:
+      - uses: actions/checkout@v4
+        name: Checkout
+
+      - name: Install vcpkg
+        run: ./.github/scripts/vcpkg.sh
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          enable-cache: true
+
+      - name: Build and install the project
+        run: uv sync --verbose

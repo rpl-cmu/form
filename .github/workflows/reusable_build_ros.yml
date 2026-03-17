@@ -1,0 +1,22 @@
+name: "Build ROS 2 package"
+
+on:
+  workflow_call:
+
+jobs:
+  build_ros:
+    name: Build ROS (linux-64)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        name: Checkout
+
+      - uses: prefix-dev/setup-pixi@v0.8.8
+        name: Setup pixi
+        with:
+          pixi-version: v0.41.4
+          manifest-path: ros/pixi.toml
+          cache: true
+
+      - name: Build ROS 2 package
+        run: pixi run --manifest-path ros/pixi.toml build

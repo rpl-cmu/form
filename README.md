@@ -4,7 +4,7 @@
 <br />
 <br />
 <a href="https://github.com/rpl-cmu/form/releases"><img src="https://img.shields.io/github/v/release/rpl-cmu/form" /></a>
-<a href="https://github.com/rpl-cmu/form/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/rpl-cmu/form/ci.yml" /></a>
+<a href="https://github.com/rpl-cmu/form/actions/workflows/on_main.yml"><img src="https://img.shields.io/github/actions/workflow/status/rpl-cmu/form/on_main.yml" /></a>
 <a href="https://github.com/rpl-cmu/form/blob/master/LICENSE"><img src="https://img.shields.io/github/license/rpl-cmu/form" /></a>
 <a href="https://arxiv.org/abs/2510.09966"><img src="https://img.shields.io/badge/arXiv-2510.09966-b31b1b.svg" /></a>
 <br />

@@ -3,7 +3,7 @@ authors = ["Easton Potokar <contagon6@gmail.com>"]
 channels = ["robostack-jazzy", "conda-forge"]
 name = "ros"
 platforms = ["linux-64"]
-version = "0.1.0"
+version = "0.1.0"                                  # x-release-please-version
 
 [activation]
 scripts = ["install/setup.sh"]

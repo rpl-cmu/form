@@ -1,3 +1,10 @@
+# First thing, we check if vcpkg is installed and if so, use it for dependencies
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.vcpkg/scripts/buildsystems/vcpkg.cmake")
+    set(CMAKE_TOOLCHAIN_FILE
+        "${CMAKE_CURRENT_SOURCE_DIR}/.vcpkg/scripts/buildsystems/vcpkg.cmake"
+    )
+endif()
+
 cmake_minimum_required(VERSION 3.16)
 
 project(form
