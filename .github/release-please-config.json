@@ -6,17 +6,18 @@
       "bump-minor-pre-major": true,
       "bump-patch-for-minor-pre-major": true,
       "extra-files": [
-        "ros/pixi.toml",
         "CMakeLists.txt",
-        {
-          "path": "ros/pixi.toml",
-          "type": "xml",
-          "xpath": "//package/version"
-        },
         {
           "type": "json",
           "path": "vcpkg.json",
           "jsonpath": "$.version"
+        },
+        "ros/pixi.toml",
+        "ros/CMakeLists.txt",
+        {
+          "path": "ros/package.xml",
+          "type": "xml",
+          "xpath": "//package/version"
         }
       ]
     }
