@@ -29,15 +29,15 @@ ros2 launch form odometry.launch.py --show-args
 ```
 which will output the following:
 
-| Parameter          | Default      | Description                                                                                                                              |
-|--------------------|--------------|------------------------------------------------------------------------------------------------------------------------------------------|
-| `topic`            | `None`       | Input point cloud topic (**Only required parameter!**)                                                                                   |
-| `lidar_model`      | `None`       | LiDAR model parameters to use. See `format.hpp` for options. Sets num_columns, num_rows, min_range, max_range, and other format options. |
-| `num_columns`      | `Inferred`   | LiDAR image width (columns). Overrides value from lidar_model.                                                                           |
-| `num_rows`         | `Inferred`   | LiDAR image height (rows). Overrides value from lidar_model.                                                                             |
-| `min_range`        | `1.0`        | Minimum LiDAR range. Overrides value from lidar_model.                                                                                   |
-| `max_range`        | `100.0`      | Maximum LiDAR range. Overrides value from lidar_model.                                                                                   |
-| `visualize`        | `true`       | Launch RViz and publish point clouds                                                                                                     |
+| Parameter          | Default       | Description                                                                                                                                                            |
+|--------------------|---------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `topic`            | `None`        | Input point cloud topic (**Only required parameter!**)                                                                                                                 |
+| `lidar_model`      | `"" (auto)`   | LiDAR model parameters to use. Empty string lets the node infer/use model defaults from the data. See `format.hpp` for options. Sets num_columns, num_rows, ranges, etc. |
+| `num_columns`      | `Inferred`    | LiDAR image width (columns). Overrides value from lidar_model.                                                                                                         |
+| `num_rows`         | `Inferred`    | LiDAR image height (rows). Overrides value from lidar_model.                                                                                                           |
+| `min_range`        | `0.0 (auto)`  | Minimum LiDAR range. `0.0` means infer/use defaults from lidar_model (falling back to the sensor’s nominal minimum range, currently 0.1 m).                            |
+| `max_range`        | `0.0 (auto)`  | Maximum LiDAR range. `0.0` means infer/use defaults from lidar_model (falling back to the sensor’s nominal maximum range, currently 100.0 m).                          |
+| `visualize`        | `true`        | Launch RViz and publish point clouds                                                                                                                                    |
 | `bagfile`          | `''`         | Optional rosbag file/folder to play                                                                                                      |
 | `base_frame`       | `''`         | Base frame id                                                                                                                            |
 | `lidar_odom_frame` | `odom_lidar` | Odometry frame id                                                                                                                        |
