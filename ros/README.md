@@ -21,8 +21,7 @@ source ./install/setup.bash
 
 ### Running
 
-The main launch file is `odometry.launch.py` which will launch the odometry node. FORM has three required inputs, **topic name**, **number of scanlines/rings/columns**, and **number of rows/circular count**. This last two are required for FORM's feature extraction.
-
+The main launch file is `odometry.launch.py` which will launch the odometry node. FORM only requires the point cloud **topic** to operate.
 To view all the available arguments, you can run:
 
 ```sh
@@ -58,10 +57,10 @@ ros2 launch form odometry.launch.py bagfile:=<path_to_rosbag> topic:=<topic_name
 
 FORM requires point clouds to be in row-major order with no dropped points for its feature extraction method. It does it's best to infer the size, ordering, and density of the point cloud to reorder things properly. There are a handful of cases that can prove suboptimal if not manually set however,
 
-1. **Column Major, Dropped Invalid Points**: In this case it's difficult (but not impossible) to tell which "column" the dropped/invalid points come from. To be able to do so, we need the returned "firing order" of a column. This is often sequential, but I've seen ring orders such as 0, 8, 1, 9, ... so forth. To set this, add your LiDAR format to format.hpp and pass it in with `lidar_model`. If it is not set, all dropped points will be added at the end of the scanline. FORM will still run fine, but likely not as accurately.
-2. **Row Major, Dropped Invalid Points**: This is very rare, but when it does occur it *is* impossible to tell which column the dropped points are from. In this case, FORM places them at the end of the scanline. 
+1. **Column Major, Dropped Invalid Points**: In this case it's difficult (but not impossible) to tell where along the scanline the dropped/invalid points come from. To be able to do so, we need the returned "firing order" of a column. This is often sequential, but I've seen ring orders such as 0, 8, 1, 9, ... so forth. To set this, add your LiDAR format to format.hpp and pass it in with `lidar_model`. If it is not set, all dropped points will be added at the end of the scanline. FORM will still run fine, but likely not quite as accurately.
+2. **Row Major, Dropped Invalid Points**: This is very rare, but when it does occur it *is* impossible to tell where along the scanline points belong. In this case, FORM places them at the end of the scanline. 
 
-FORM will output details about it's point cloud format inference for debugging purposes if you ever hit any edge cases that don't seem to be working.
+FORM will output details about it's point cloud format inference for debugging purposes if you ever hit any edge cases that don't seem to be working. Generally fixes *should* be as easy as setting the parameters that FORM incorrectly inferred.
 
 ### Development
 
