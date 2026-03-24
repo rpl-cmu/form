@@ -25,7 +25,7 @@ inline std::ostream &operator<<(std::ostream &os, const LidarFormat &format) {
   return os;
 }
 
-/// Invert a map from firing order to row index into a map from row index to firing
+/// Invert a map from firing order -> row index into a map from row index -> firing
 /// order
 ///
 /// By default printing out the row index in the order they are fired gives

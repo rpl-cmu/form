@@ -30,44 +30,38 @@ ros2 launch form odometry.launch.py --show-args
 ```
 which will output the following:
 
-| Parameter          | Default      | Description                          |
-|--------------------|--------------|--------------------------------------|
-| `topic`            | `None`       | Input point cloud topic              |
-| `num_columns`      | `None`       | LiDAR image width (columns)          |
-| `num_rows`         | `None`       | LiDAR image height (rows)            |
-| `min_range`        | `1.0`        | Minimum LiDAR range                  |
-| `max_range`        | `100.0`      | Maximum LiDAR range                  |
-| `visualize`        | `true`       | Launch RViz and publish point clouds |
-| `bagfile`          | `''`         | Optional rosbag file/folder to play  |
-| `base_frame`       | `''`         | Base frame id                        |
-| `lidar_odom_frame` | `odom_lidar` | Odometry frame id                    |
-| `publish_odom_tf`  | `True`       | Publish odom->base TF                |
-| `invert_odom_tf`   | `True`       | Invert published odom TF             |
-| `use_sim_time`     | `True`       | Use simulation time                  |
+| Parameter          | Default      | Description                                                                                                                              |
+|--------------------|--------------|------------------------------------------------------------------------------------------------------------------------------------------|
+| `topic`            | `None`       | Input point cloud topic (**Only required parameter!**)                                                                                   |
+| `lidar_model`      | `None`       | LiDAR model parameters to use. See `format.hpp` for options. Sets num_columns, num_rows, min_range, max_range, and other format options. |
+| `num_columns`      | `Inferred`   | LiDAR image width (columns). Overrides value from lidar_model.                                                                           |
+| `num_rows`         | `Inferred`   | LiDAR image height (rows). Overrides value from lidar_model.                                                                             |
+| `min_range`        | `1.0`        | Minimum LiDAR range. Overrides value from lidar_model.                                                                                   |
+| `max_range`        | `100.0`      | Maximum LiDAR range. Overrides value from lidar_model.                                                                                   |
+| `visualize`        | `true`       | Launch RViz and publish point clouds                                                                                                     |
+| `bagfile`          | `''`         | Optional rosbag file/folder to play                                                                                                      |
+| `base_frame`       | `''`         | Base frame id                                                                                                                            |
+| `lidar_odom_frame` | `odom_lidar` | Odometry frame id                                                                                                                        |
+| `publish_odom_tf`  | `True`       | Publish odom->base TF                                                                                                                    |
+| `invert_odom_tf`   | `True`       | Invert published odom TF                                                                                                                 |
+| `use_sim_time`     | `True`       | Use simulation time                                                                                                                      |
 
 If a bagfile is provided, the node will play the bagfile and process the point clouds. If not, it will just subscribe to the topic and process incoming point clouds in real-time.
 
 Thus as an example
 
 ```sh
-ros2 launch form odometry.launch.py bagfile:=<path_to_rosbag> topic:=<topic_name> num_columns:=<num_columns> num_rows:=<num_rows>
+ros2 launch form odometry.launch.py bagfile:=<path_to_rosbag> topic:=<topic_name>
 ```
 
 ### Pointcloud Format
 
-FORM requires point clouds to be in row-major order with no dropped points for its feature extraction method. It does it's best to infer the ordering and density of the point cloud using the following heuristics,
+FORM requires point clouds to be in row-major order with no dropped points for its feature extraction method. It does it's best to infer the size, ordering, and density of the point cloud to reorder things properly. There are a handful of cases that can prove suboptimal if not manually set however,
 
-| Format         | Heuristic to Infer                                       |
-|----------------|----------------------------------------------------------|
-| all points     | Point cloud size equaling `num_columns` * `num_rows`     |
-| dropped points | Point cloud size not equaling `num_columns` * `num_rows` |
-| row-major      | Stationary ring number for first few points              |
-| column-major   | Increasing ring number for first few points              |
+1. **Column Major, Dropped Invalid Points**: In this case it's difficult (but not impossible) to tell which "column" the dropped/invalid points come from. To be able to do so, we need the returned "firing order" of a column. This is often sequential, but I've seen ring orders such as 0, 8, 1, 9, ... so forth. To set this, add your LiDAR format to format.hpp and pass it in with `lidar_model`. If it is not set, all dropped points will be added at the end of the scanline. FORM will still run fine, but likely not as accurately.
+2. **Row Major, Dropped Invalid Points**: This is very rare, but when it does occur it *is* impossible to tell which column the dropped points are from. In this case, FORM places them at the end of the scanline. 
 
-IMPORTANT: If you're point cloud *does not* is not in row or column major format, FORM will crash! Please open an issue and we can add a flag to handle you're appropriate cloud formatting. (For example, I've seen some velodyne point clouds have ring order returned as 0, 8, 1, 9, 2, 10, ... This will break things)
-
-NOTE: If your point cloud is row major and has dropped invalid points, there is usually no way to figure out where along the scan line the dropped points belong. FORM places all of them at the end. This may have an impact on feature extraction, but things generally *should* still work.
-
+FORM will output details about it's point cloud format inference for debugging purposes if you ever hit any edge cases that don't seem to be working.
 
 ### Development
 
