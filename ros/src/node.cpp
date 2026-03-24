@@ -6,6 +6,7 @@
 // (Copyright (c) 2022 Ignacio Vizzo, Tiziano Guadagnino, Benedikt Mersch, Cyrill
 // Stachniss)
 #include <memory>
+#include <rclcpp/logging.hpp>
 #include <utility>
 
 // FORM-ROS
@@ -70,6 +71,7 @@ EstimatorNode::EstimatorNode(const rclcpp::NodeOptions &options)
       RCLCPP_WARN(this->get_logger(), "Unknown LiDAR model '%s', defaulting to inferring model", model_name.c_str());
     } else {
       lidar_format_ = it->second;
+      RCLCPP_INFO(this->get_logger(), "Using LiDAR format for model '%s'", model_name.c_str());
     }
   }
 
@@ -77,16 +79,25 @@ EstimatorNode::EstimatorNode(const rclcpp::NodeOptions &options)
   form::Estimator::Params params;
 
   // Feature extraction
-  auto min_range = declare_parameter<double>("min_range", 1.0);
-  auto max_range = declare_parameter<double>("max_range", 100.0);
+  auto min_range = declare_parameter<double>("min_range", 0.0);
+  auto max_range = declare_parameter<double>("max_range", 0.0);
+  if (min_range == 0.0) {
+    min_range = lidar_format_.has_value() ? lidar_format_->min_range : 0.1; 
+  }
+  if (max_range == 0.0) {
+    max_range = lidar_format_.has_value() ? lidar_format_->max_range : 100.0;
+  }
   params.extraction.min_norm_squared = min_range * min_range;
   params.extraction.max_norm_squared = max_range * max_range;
-  if(lidar_format_.has_value()) {
+
+  // If neither lidar_format or these parameters are set directly, they'll be inferred later
+  params.extraction.num_rows = declare_parameter<int>("num_rows", 0);
+  params.extraction.num_columns = declare_parameter<int>("num_columns", 0);
+  if(lidar_format_.has_value() && params.extraction.num_rows == 0) {
     params.extraction.num_rows = lidar_format_->num_rows;
+  }
+  if(lidar_format_.has_value() && params.extraction.num_columns == 0) {
     params.extraction.num_columns = lidar_format_->num_columns;
-  } else {
-    params.extraction.num_rows = declare_parameter<int>("num_rows", 0);
-    params.extraction.num_columns = declare_parameter<int>("num_columns", 0);
   }
   params.extraction.neighbor_points         = declare_parameter<int>("neighbor_points", params.extraction.neighbor_points);
   params.extraction.num_sectors             = declare_parameter<int>("num_sectors", params.extraction.num_sectors);
@@ -150,6 +161,7 @@ void EstimatorNode::register_frame(
   auto raw_points = form_ros::load_pc2(msg);
 
   // Infer LiDAR sizes if not set by user
+  bool inferred_sizes = false;
   if (estimator_.m_extractor.params.num_rows == 0 ||
       estimator_.m_extractor.params.num_columns == 0) {
     const auto [num_rows, num_columns] = form_ros::infer_lidar_size(raw_points);
@@ -159,22 +171,27 @@ void EstimatorNode::register_frame(
     if (estimator_.m_extractor.params.num_columns == 0) {
       estimator_.m_extractor.params.num_columns = num_columns;
     }
-    RCLCPP_INFO(this->get_logger(),
-                "Inferred LiDAR sizes: num_rows=%lu, num_columns=%lu", num_rows,
-                num_columns);
+    inferred_sizes = true;
   }
+  RCLCPP_INFO_ONCE(this->get_logger(), "%s LiDAR sizes: num_rows=%d, num_columns=%d",
+                   inferred_sizes ? "Inferred" : "User-specified",
+                   estimator_.m_extractor.params.num_rows,
+                   estimator_.m_extractor.params.num_columns);
+
   // Infer lidar ordering properties if not set by user
+  bool inferred_format = false;
   if (!lidar_format_.has_value()) {
     lidar_format_ = form_ros::infer_lidar_order(
         raw_points, estimator_.m_extractor.params.num_rows,
         estimator_.m_extractor.params.num_columns);
-    RCLCPP_INFO(this->get_logger(),
-                "Inferred LiDAR ordering: %s, %s, %s firing order",
-                lidar_format_->row_major ? "row major" : "column major",
-                lidar_format_->all_points_present ? "all points present"
-                                                  : "not all points present",
-                lidar_format_->map_row_to_fire.has_value() ? "known" : "unknown");
+    inferred_format = true;
   }
+  RCLCPP_INFO_ONCE(this->get_logger(), "%s LiDAR ordering: %s, %s, %s firing order",
+                   inferred_format ? "Inferred" : "User-specified",
+                   lidar_format_->row_major ? "row major" : "column major",
+                   lidar_format_->all_points_present ? "all points present"
+                                                     : "not all points present",
+                   lidar_format_->map_row_to_fire.has_value() ? "known" : "unknown");
 
   // RawPoints -> Structured form::PointXYZf
   const auto points =

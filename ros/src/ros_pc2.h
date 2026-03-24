@@ -191,6 +191,16 @@ inline LidarFormat infer_lidar_order(const std::vector<RawPoint> &raw,
   model.row_major = raw[0].row == raw[1].row;
   model.all_points_present = (raw.size() == num_rows * num_columns);
 
+  // If all points are present, we can infer the firing order
+  // by looking at the first num_rows points
+  if (model.all_points_present && !model.row_major) {
+    std::vector<long> map_fire_to_row(num_rows, -1);
+    for (size_t i = 0; i < num_rows; ++i) {
+      map_fire_to_row[i] = raw[i].row;
+    }
+    model.map_row_to_fire = invert_map(map_fire_to_row);
+  }
+
   return model;
 }
 

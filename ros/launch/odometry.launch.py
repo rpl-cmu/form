@@ -72,13 +72,12 @@ def generate_launch_description():
     # lidar geometry config
     # either specify a model
     lidar_model = make_config(la, "lidar_model",    "Predefined LiDAR model (e.g. 'VLP-16')", "")
-    # specify geometry directly (overrides model if provided)
+    # specify some geometry directly (will override model if set)
     num_columns     = make_config(la, "num_columns",      "LiDAR image width (columns)",             0)
     num_rows        = make_config(la, "num_rows",         "LiDAR image height (rows)",               0)
-    # Or let them be inferred from the first point cloud message (suboptimal, but will usually still work fine
+    min_range   = make_config(la, "min_range",        "Minimum LiDAR range",                  0.0)
+    max_range   = make_config(la, "max_range",        "Maximum LiDAR range",                  0.0)
 
-    min_range   = make_config(la, "min_range",        "Minimum LiDAR range",                  1.0)
-    max_range   = make_config(la, "max_range",        "Maximum LiDAR range",                  100.0)
     # optional visualization and rosbag play
     visualize = make_config(la, "visualize",        "Launch RViz and debug visualization",  True)
     bagfile   = make_config(la, "bagfile",          "Optional rosbag file/folder to play",  "")
