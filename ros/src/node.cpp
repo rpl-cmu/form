@@ -169,10 +169,11 @@ void EstimatorNode::register_frame(
         raw_points, estimator_.m_extractor.params.num_rows,
         estimator_.m_extractor.params.num_columns);
     RCLCPP_INFO(this->get_logger(),
-                "Inferred LiDAR ordering: %s, %s, sequential firing order",
+                "Inferred LiDAR ordering: %s, %s, %s firing order",
                 lidar_format_->row_major ? "row major" : "column major",
                 lidar_format_->all_points_present ? "all points present"
-                                                  : "not all points present");
+                                                  : "not all points present",
+                lidar_format_->map_row_to_fire.has_value() ? "known" : "unknown");
   }
 
   // RawPoints -> Structured form::PointXYZf

@@ -190,7 +190,6 @@ inline LidarFormat infer_lidar_order(const std::vector<RawPoint> &raw,
 
   model.row_major = raw[0].row == raw[1].row;
   model.all_points_present = (raw.size() == num_rows * num_columns);
-  model.map_row_to_fire = default_row_to_fire(num_rows);
 
   return model;
 }
@@ -227,11 +226,12 @@ inline void fill_col_row_major(std::vector<RawPoint> &mm) {
   _fill_col(mm, func_col);
 }
 
-// Fills in column index for column major order
+// Fills in column index for column major order with known firing order
 inline void fill_col_col_major(std::vector<RawPoint> &mm, const LidarFormat &model) {
   auto func_col = [&model](uint16_t &col, const uint16_t &prev_col,
                            const uint8_t &prev_row, const uint8_t &curr_row) {
-    if (model.map_row_to_fire[curr_row] < model.map_row_to_fire[prev_row]) {
+    if (model.map_row_to_fire.value()[curr_row] <
+        model.map_row_to_fire.value()[prev_row]) {
       col = prev_col + 1;
     } else {
       col = prev_col;
@@ -239,6 +239,18 @@ inline void fill_col_col_major(std::vector<RawPoint> &mm, const LidarFormat &mod
   };
 
   _fill_col(mm, func_col);
+}
+
+// Fills in column index for column major order when we don't know firing order,
+// by counting how many times each row has been seen so far
+// This will put all invalid points at the end of each row
+inline void fill_col_col_major_unknown(std::vector<RawPoint> &mm,
+                                       const LidarFormat &model) {
+  std::vector<size_t> col_index(model.num_rows, 0);
+  for (auto &p : mm) {
+    p.col = col_index[p.row];
+    col_index[p.row]++;
+  }
 }
 
 // Otherwise, we won't be able to reorder things properly
@@ -263,9 +275,11 @@ reorder(std::vector<RawPoint> &raw, const LidarFormat &model,
     }
   }
 
-  // Fill out column indices based on inferred ordering
+  // Fill out column indices based on current setup
   if (model.row_major) {
     fill_col_row_major(raw);
+  } else if (!model.map_row_to_fire.has_value()) {
+    fill_col_col_major_unknown(raw, model);
   } else {
     fill_col_col_major(raw, model);
   }

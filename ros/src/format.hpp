@@ -1,6 +1,7 @@
 #pragma once
 
 #include <map>
+#include <optional>
 #include <ostream>
 #include <string>
 #include <vector>
@@ -10,7 +11,7 @@ struct LidarFormat {
   int num_columns = 0;
   bool row_major = false;
   bool all_points_present = false;
-  std::vector<long> map_row_to_fire = {};
+  std::optional<std::vector<long>> map_row_to_fire = std::nullopt;
 };
 
 inline std::ostream &operator<<(std::ostream &os, const LidarFormat &format) {
