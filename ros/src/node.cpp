@@ -11,7 +11,6 @@
 // FORM-ROS
 #include "node.hpp"
 #include "ros_pc2.h"
-#include "utils.hpp"
 
 // FORM
 #include "form/form.hpp"
@@ -62,18 +61,33 @@ EstimatorNode::EstimatorNode(const rclcpp::NodeOptions &options)
   position_covariance_    = declare_parameter<double>("position_covariance", 0.1);
   orientation_covariance_ = declare_parameter<double>("orientation_covariance", 0.1);
 
+  // LiDAR format
+  std::string model_name = declare_parameter<std::string>("lidar_model", "");
+  // If the name is given specifically, use it
+  if (!model_name.empty()) {
+    auto it = LIDAR_FORMATS.find(model_name);
+    if (it == LIDAR_FORMATS.end()) {
+      RCLCPP_WARN(this->get_logger(), "Unknown LiDAR model '%s', defaulting to inferring model", model_name.c_str());
+    } else {
+      lidar_format_ = it->second;
+    }
+  }
+
   // FORM parameters
   form::Estimator::Params params;
 
-  // LiDAR geometry (required)
-  params.extraction.num_rows    = declare_parameter<int>("num_rows", params.extraction.num_rows);
-  params.extraction.num_columns = declare_parameter<int>("num_columns", params.extraction.num_columns);
+  // Feature extraction
   auto min_range = declare_parameter<double>("min_range", 1.0);
   auto max_range = declare_parameter<double>("max_range", 100.0);
   params.extraction.min_norm_squared = min_range * min_range;
   params.extraction.max_norm_squared = max_range * max_range;
-
-  // Feature extraction
+  if(lidar_format_.has_value()) {
+    params.extraction.num_rows = lidar_format_->num_rows;
+    params.extraction.num_columns = lidar_format_->num_columns;
+  } else {
+    params.extraction.num_rows = declare_parameter<int>("num_rows", 0);
+    params.extraction.num_columns = declare_parameter<int>("num_columns", 0);
+  }
   params.extraction.neighbor_points         = declare_parameter<int>("neighbor_points", params.extraction.neighbor_points);
   params.extraction.num_sectors             = declare_parameter<int>("num_sectors", params.extraction.num_sectors);
   params.extraction.planar_threshold        = declare_parameter<double>("planar_threshold", params.extraction.planar_threshold);
@@ -132,10 +146,38 @@ EstimatorNode::EstimatorNode(const rclcpp::NodeOptions &options)
 
 void EstimatorNode::register_frame(
     const sensor_msgs::msg::PointCloud2::ConstSharedPtr &msg) {
-  // Convert PointCloud2 -> organized vector<PointXYZf> using pc2_conversions
+  // Convert PointCloud2 -> RawPoints
+  auto raw_points = form_ros::load_pc2(msg);
+
+  // Infer LiDAR sizes if not set by user
+  if (estimator_.m_extractor.params.num_rows == 0 ||
+      estimator_.m_extractor.params.num_columns == 0) {
+    const auto [num_rows, num_columns] = form_ros::infer_lidar_size(raw_points);
+    if (estimator_.m_extractor.params.num_rows == 0) {
+      estimator_.m_extractor.params.num_rows = num_rows;
+    }
+    if (estimator_.m_extractor.params.num_columns == 0) {
+      estimator_.m_extractor.params.num_columns = num_columns;
+    }
+    RCLCPP_INFO(this->get_logger(),
+                "Inferred LiDAR sizes: num_rows=%lu, num_columns=%lu", num_rows,
+                num_columns);
+  }
+  // Infer lidar ordering properties if not set by user
+  if (!lidar_format_.has_value()) {
+    lidar_format_ = form_ros::infer_lidar_order(
+        raw_points, estimator_.m_extractor.params.num_rows,
+        estimator_.m_extractor.params.num_columns);
+    RCLCPP_INFO(this->get_logger(),
+                "Inferred LiDAR ordering: %s, %s, sequential firing order",
+                lidar_format_->row_major ? "row major" : "column major",
+                lidar_format_->all_points_present ? "all points present"
+                                                  : "not all points present");
+  }
+
+  // RawPoints -> Structured form::PointXYZf
   const auto points =
-      form_ros::PointCloud2ToForm(msg, estimator_.m_params.extraction.num_rows,
-                                  estimator_.m_params.extraction.num_columns);
+      form_ros::reorder(raw_points, *lidar_format_, this->get_logger());
 
   // Register frame with FORM
   const auto &[planar_kp, point_kp] = estimator_.register_scan(points);

@@ -44,6 +44,7 @@ class config:
     num_threads: int = 0
 
     # Covariance diagonal values
+    # TODO: Extract covariance from our graph
     position_covariance: float = 0.1
     orientation_covariance: float = 0.1
 
@@ -69,8 +70,13 @@ def generate_launch_description():
     # fmt: off
     topic = make_config(la, "topic",            "Input point cloud topic")
     # lidar geometry config
-    num_columns = make_config(la, "num_columns",      "LiDAR image width (columns)")
-    num_rows    = make_config(la, "num_rows",         "LiDAR image height (rows)")
+    # either specify a model
+    lidar_model = make_config(la, "lidar_model",    "Predefined LiDAR model (e.g. 'VLP-16')", "")
+    # specify geometry directly (overrides model if provided)
+    num_columns     = make_config(la, "num_columns",      "LiDAR image width (columns)",             0)
+    num_rows        = make_config(la, "num_rows",         "LiDAR image height (rows)",               0)
+    # Or let them be inferred from the first point cloud message (suboptimal, but will usually still work fine
+
     min_range   = make_config(la, "min_range",        "Minimum LiDAR range",                  1.0)
     max_range   = make_config(la, "max_range",        "Maximum LiDAR range",                  100.0)
     # optional visualization and rosbag play
@@ -101,11 +107,12 @@ def generate_launch_description():
                 "publish_odom_tf": publish_odom_tf,
                 "invert_odom_tf": invert_odom_tf,
                 # LiDAR geometry
+                "lidar_model": lidar_model,
                 "num_columns": num_columns,
                 "num_rows": num_rows,
+                # Feature extraction
                 "min_range": min_range,
                 "max_range": max_range,
-                # Feature extraction
                 "neighbor_points": config.neighbor_points,
                 "num_sectors": config.num_sectors,
                 "planar_threshold": config.planar_threshold,

@@ -5,6 +5,7 @@
 // (row-major, num_rows * num_columns) suitable for FORM's feature extraction.
 #pragma once
 
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -15,12 +16,23 @@
 #include <string>
 #include <vector>
 
+#include "format.hpp"
 #include <form/utils.hpp>
+#include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 
 namespace form_ros {
 
-// ----------------------------- Data getters ----------------------------- //
+// ----------------------------- PC2 -> RawPoints ----------------------------- //
+// Holds parsed per-point data before reordering into the organized grid.
+struct RawPoint {
+  float x = 0.0f;
+  float y = 0.0f;
+  float z = 0.0f;
+  uint8_t row = 0;
+  uint16_t col = 0;
+};
+
 // Build a lambda that reads a field of type T from raw PointCloud2 byte data
 // at the given offset, handling the various PointField datatypes.
 template <typename T>
@@ -82,83 +94,8 @@ template <typename T> std::function<void(T &, const uint8_t *)> blank() {
   return [](T &, const uint8_t *) noexcept {};
 }
 
-// ------------------------- Reordering Helpers ------------------------- //
-// Holds parsed per-point data before reordering into the organized grid.
-struct RawPoint {
-  float x = 0.0f;
-  float y = 0.0f;
-  float z = 0.0f;
-  uint8_t row = 0;
-  uint16_t col = 0;
-};
-
-// Iterates through points to fill in columns
-inline void
-_fill_col(std::vector<RawPoint> &mm,
-          std::function<void(uint16_t &col, const uint16_t &prev_col,
-                             const uint8_t &prev_row, const uint8_t &curr_row)>
-              func_col) {
-  // fill out the first one to kickstart
-  uint16_t prev_col = 0;
-  uint8_t prev_row = mm[0].row;
-  for (auto p = mm.begin() + 1; p != mm.end(); ++p) {
-    func_col(p->col, prev_col, prev_row, p->row);
-    prev_col = p->col;
-    prev_row = p->row;
-  }
-}
-
-// Fills in column index for row major order
-inline void fill_col_row_major(std::vector<RawPoint> &mm) {
-  auto func_col = [](uint16_t &col, const uint16_t &prev_col,
-                     const uint8_t &prev_row, const uint8_t &curr_row) {
-    if (prev_row != curr_row) {
-      col = 0;
-    } else {
-      col = prev_col + 1;
-    }
-  };
-
-  _fill_col(mm, func_col);
-}
-
-// Fills in column index for column major order
-inline void fill_col_col_major(std::vector<RawPoint> &mm) {
-  auto func_col = [](uint16_t &col, const uint16_t &prev_col,
-                     const uint8_t &prev_row, const uint8_t &curr_row) {
-    if (curr_row < prev_row) {
-      col = prev_col + 1;
-    } else {
-      col = prev_col;
-    }
-  };
-
-  _fill_col(mm, func_col);
-}
-
-inline std::vector<form::PointXYZf>
-reorder_points(std::vector<RawPoint> &mm, size_t num_rows, size_t num_cols) {
-  std::vector<form::PointXYZf> output(num_rows * num_cols,
-                                      form::PointXYZf(0.0f, 0.0f, 0.0f));
-
-  for (auto p : mm) {
-    if (p.row >= num_rows || p.col >= num_cols) {
-      std::cerr << "Warning: Point with row " << static_cast<int>(p.row)
-                << " and col " << p.col
-                << " is out of bounds for num_rows=" << num_rows
-                << " and num_cols=" << num_cols << ". Skipping this point."
-                << std::endl;
-      continue;
-    }
-    output[p.row * num_cols + p.col] = form::PointXYZf(p.x, p.y, p.z);
-  }
-  return output;
-}
-
-// ------------------------- Main Conversion ------------------------- //
-inline std::vector<form::PointXYZf>
-PointCloud2ToForm(const sensor_msgs::msg::PointCloud2::ConstSharedPtr &msg,
-                  int num_rows, int num_columns) {
+inline std::vector<RawPoint>
+load_pc2(const sensor_msgs::msg::PointCloud2::ConstSharedPtr &msg) {
   if (msg->is_bigendian) {
     throw std::runtime_error("Big-endian PointCloud2 is not supported");
   }
@@ -214,28 +151,150 @@ PointCloud2ToForm(const sensor_msgs::msg::PointCloud2::ConstSharedPtr &msg,
     func_row(raw[i].row, pt);
   }
 
-  // Catch some potential edge cases with bad values
-  if (n_points > num_columns * num_rows) {
-    std::cerr << "Warning: PointCloud2 has more points than expected from num_rows "
-                 "and num_columns. Please check your parameters."
-              << std::endl;
+  return raw;
+}
+
+// ------------------------- Infer LiDAR Properties ------------------------- //
+inline std::tuple<size_t, size_t>
+infer_lidar_size(const std::vector<RawPoint> &raw) {
+  size_t num_rows = 0;
+  size_t num_columns = 0;
+
+  // Infer the number of rings/rows by finding the max row index in the data
+  // And then rounding up to the nearest power of 2 for safety
+  // (Occasionally entire rows will be missing)
+  num_rows = std::max_element(
+                 raw.begin(), raw.end(),
+                 [](const RawPoint &a, const RawPoint &b) { return a.row < b.row; })
+                 ->row +
+             1; // rows are 0-indexed
+  num_rows = static_cast<size_t>(std::pow(2, std::ceil(std::log2(num_rows))));
+
+  // Count the number of each row to infer the number of columns
+  std::vector<size_t> row_counts(num_rows, 0);
+  for (const auto &p : raw) {
+    row_counts[p.row]++;
   }
 
-  // Infer properties of the cloud
-  bool all_points_present = (n_points == num_rows * num_columns);
-  bool row_major = true;
-  if (n_points >= 2) {
-    row_major = (raw[0].row == raw[1].row);
+  // Find the maximum number of points in any row
+  num_columns = *std::max_element(row_counts.begin(), row_counts.end());
+
+  return std::make_tuple(num_rows, num_columns);
+}
+
+inline LidarFormat infer_lidar_order(const std::vector<RawPoint> &raw,
+                                     size_t num_rows, size_t num_columns) {
+  LidarFormat model;
+  model.num_rows = num_rows;
+  model.num_columns = num_columns;
+
+  model.row_major = raw[0].row == raw[1].row;
+  model.all_points_present = (raw.size() == num_rows * num_columns);
+  model.map_row_to_fire = default_row_to_fire(num_rows);
+
+  return model;
+}
+
+// ------------------------- Reordering Helpers ------------------------- //
+
+// Iterates through points to fill in columns
+inline void
+_fill_col(std::vector<RawPoint> &mm,
+          std::function<void(uint16_t &col, const uint16_t &prev_col,
+                             const uint8_t &prev_row, const uint8_t &curr_row)>
+              func_col) {
+  // fill out the first one to kickstart
+  uint16_t prev_col = 0;
+  uint8_t prev_row = mm[0].row;
+  for (auto p = mm.begin() + 1; p != mm.end(); ++p) {
+    func_col(p->col, prev_col, prev_row, p->row);
+    prev_col = p->col;
+    prev_row = p->row;
+  }
+}
+
+// Fills in column index for row major order
+inline void fill_col_row_major(std::vector<RawPoint> &mm) {
+  auto func_col = [](uint16_t &col, const uint16_t &prev_col,
+                     const uint8_t &prev_row, const uint8_t &curr_row) {
+    if (prev_row != curr_row) {
+      col = 0;
+    } else {
+      col = prev_col + 1;
+    }
+  };
+
+  _fill_col(mm, func_col);
+}
+
+// Fills in column index for column major order
+inline void fill_col_col_major(std::vector<RawPoint> &mm, const LidarFormat &model) {
+  auto func_col = [&model](uint16_t &col, const uint16_t &prev_col,
+                           const uint8_t &prev_row, const uint8_t &curr_row) {
+    if (model.map_row_to_fire[curr_row] < model.map_row_to_fire[prev_row]) {
+      col = prev_col + 1;
+    } else {
+      col = prev_col;
+    }
+  };
+
+  _fill_col(mm, func_col);
+}
+
+// Otherwise, we won't be able to reorder things properly
+inline std::vector<form::PointXYZf>
+reorder(std::vector<RawPoint> &raw, const LidarFormat &model,
+        std::optional<rclcpp::Logger> logger = std::nullopt) {
+  const int n_points = static_cast<int>(raw.size());
+
+  // Catch some potential edge cases with bad values
+  if (n_points > model.num_columns * model.num_rows) {
+    if (logger) {
+      RCLCPP_WARN(logger.value(),
+                  "Warning: PointCloud2 has more points (%d) than expected from "
+                  "num_rows and num_columns (%d). Parameters were inferred or "
+                  "provided incorrectly.",
+                  n_points, model.num_rows * model.num_columns);
+    } else {
+      std::cerr
+          << "Warning: PointCloud2 has more points than expected from num_rows "
+          << "and num_columns. Parameters were inferred or provided incorrectly."
+          << std::endl;
+    }
   }
 
   // Fill out column indices based on inferred ordering
-  if (row_major) {
+  if (model.row_major) {
     fill_col_row_major(raw);
   } else {
-    fill_col_col_major(raw);
+    fill_col_col_major(raw, model);
   }
 
-  return reorder_points(raw, num_rows, num_columns);
+  std::vector<form::PointXYZf> output(model.num_rows * model.num_columns,
+                                      form::PointXYZf(0.0f, 0.0f, 0.0f));
+
+  for (auto p : raw) {
+    if (p.row >= model.num_rows || p.col >= model.num_columns) {
+      if (logger) {
+        RCLCPP_WARN(logger.value(),
+                    "Warning: Point with row %d and col %d is out of "
+                    "bounds for num_rows=%d and num_cols=%d, skipping. Parameters "
+                    "were inferred or provided incorrectly.",
+                    static_cast<int>(p.row), p.col, model.num_rows,
+                    model.num_columns);
+      } else {
+        std::cerr << "Warning: Point with row " << static_cast<int>(p.row)
+                  << " and col " << p.col
+                  << " is out of bounds for num_rows=" << model.num_rows
+                  << " and num_cols=" << model.num_columns
+                  << ", skipping. Parameters were inferred or provided incorrectly."
+                  << std::endl;
+      }
+      continue;
+    }
+    output[p.row * model.num_columns + p.col] = form::PointXYZf(p.x, p.y, p.z);
+  }
+  return output;
 }
 
 } // namespace form_ros
