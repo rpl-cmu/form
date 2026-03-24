@@ -93,11 +93,20 @@ EstimatorNode::EstimatorNode(const rclcpp::NodeOptions &options)
   // If neither lidar_format or these parameters are set directly, they'll be inferred later
   params.extraction.num_rows = declare_parameter<int>("num_rows", 0);
   params.extraction.num_columns = declare_parameter<int>("num_columns", 0);
-  if(lidar_format_.has_value() && params.extraction.num_rows == 0) {
-    params.extraction.num_rows = lidar_format_->num_rows;
+  if(lidar_format_.has_value()) {
+    // Use lidar_model if no user input, but override with user input if provided, otherwise rely on inference
+    if(params.extraction.num_rows == 0) {
+      params.extraction.num_rows = lidar_format_->num_rows;
+    } else {
+      lidar_format_->num_rows = params.extraction.num_rows;
+    }
   }
-  if(lidar_format_.has_value() && params.extraction.num_columns == 0) {
-    params.extraction.num_columns = lidar_format_->num_columns;
+  if(lidar_format_.has_value() ) {
+    if(params.extraction.num_columns == 0) {
+      params.extraction.num_columns = lidar_format_->num_columns;
+    } else {
+      lidar_format_->num_columns = params.extraction.num_columns;
+    }
   }
   params.extraction.neighbor_points         = declare_parameter<int>("neighbor_points", params.extraction.neighbor_points);
   params.extraction.num_sectors             = declare_parameter<int>("num_sectors", params.extraction.num_sectors);
@@ -157,6 +166,14 @@ EstimatorNode::EstimatorNode(const rclcpp::NodeOptions &options)
 
 void EstimatorNode::register_frame(
     const sensor_msgs::msg::PointCloud2::ConstSharedPtr &msg) {
+  // A lot of work later requires at least 2 points
+  if (msg->width * msg->height <= 2) {
+    RCLCPP_WARN(this->get_logger(),
+                "Received PointCloud2 message with too few points: %d",
+                msg->width * msg->height);
+    return;
+  }
+
   // Convert PointCloud2 -> RawPoints
   auto raw_points = form_ros::load_pc2(msg);
 
