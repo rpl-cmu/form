@@ -14,7 +14,7 @@
     ]
   },
   "name": "form",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "dependencies": [
     "eigen3",
     "gtsam",

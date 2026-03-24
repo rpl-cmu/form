@@ -7,7 +7,7 @@ endif()
 
 cmake_minimum_required(VERSION 3.16)
 
-project(form VERSION 0.1.0 LANGUAGES CXX) # x-release-please-version
+project(form VERSION 0.1.2 LANGUAGES CXX) # x-release-please-version
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD 17)

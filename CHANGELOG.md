@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/rpl-cmu/form/compare/v0.1.1...v0.1.2) (2026-03-24)
+
+
+### Features
+
+* ROS2 point reordering ([#13](https://github.com/rpl-cmu/form/issues/13)) ([37cb01f](https://github.com/rpl-cmu/form/commit/37cb01f8f5cf65a9dfd18081888536063d5e58b9))
+
 ## [0.1.1](https://github.com/rpl-cmu/form/compare/v0.1.0...v0.1.1) (2026-03-17)
 
 
