@@ -6,12 +6,12 @@
 // (Copyright (c) 2022 Ignacio Vizzo, Tiziano Guadagnino, Benedikt Mersch, Cyrill
 // Stachniss)
 #include <memory>
+#include <rclcpp/logging.hpp>
 #include <utility>
 
 // FORM-ROS
 #include "node.hpp"
 #include "ros_pc2.h"
-#include "utils.hpp"
 
 // FORM
 #include "form/form.hpp"
@@ -62,18 +62,52 @@ EstimatorNode::EstimatorNode(const rclcpp::NodeOptions &options)
   position_covariance_    = declare_parameter<double>("position_covariance", 0.1);
   orientation_covariance_ = declare_parameter<double>("orientation_covariance", 0.1);
 
+  // LiDAR format
+  std::string model_name = declare_parameter<std::string>("lidar_model", "");
+  // If the name is given specifically, use it
+  if (!model_name.empty()) {
+    auto it = LIDAR_FORMATS.find(model_name);
+    if (it == LIDAR_FORMATS.end()) {
+      RCLCPP_WARN(this->get_logger(), "Unknown LiDAR model '%s', defaulting to inferring model", model_name.c_str());
+    } else {
+      lidar_format_ = it->second;
+      RCLCPP_INFO(this->get_logger(), "Using LiDAR format for model '%s'", model_name.c_str());
+    }
+  }
+
   // FORM parameters
   form::Estimator::Params params;
 
-  // LiDAR geometry (required)
-  params.extraction.num_rows    = declare_parameter<int>("num_rows", params.extraction.num_rows);
-  params.extraction.num_columns = declare_parameter<int>("num_columns", params.extraction.num_columns);
-  auto min_range = declare_parameter<double>("min_range", 1.0);
-  auto max_range = declare_parameter<double>("max_range", 100.0);
+  // Feature extraction
+  auto min_range = declare_parameter<double>("min_range", 0.0);
+  auto max_range = declare_parameter<double>("max_range", 0.0);
+  if (min_range == 0.0) {
+    min_range = lidar_format_.has_value() ? lidar_format_->min_range : 0.1; 
+  }
+  if (max_range == 0.0) {
+    max_range = lidar_format_.has_value() ? lidar_format_->max_range : 100.0;
+  }
   params.extraction.min_norm_squared = min_range * min_range;
   params.extraction.max_norm_squared = max_range * max_range;
 
-  // Feature extraction
+  // If neither lidar_format or these parameters are set directly, they'll be inferred later
+  params.extraction.num_rows = declare_parameter<int>("num_rows", 0);
+  params.extraction.num_columns = declare_parameter<int>("num_columns", 0);
+  if(lidar_format_.has_value()) {
+    // Use lidar_model if no user input, but override with user input if provided, otherwise rely on inference
+    if(params.extraction.num_rows == 0) {
+      params.extraction.num_rows = lidar_format_->num_rows;
+    } else {
+      lidar_format_->num_rows = params.extraction.num_rows;
+    }
+  }
+  if(lidar_format_.has_value() ) {
+    if(params.extraction.num_columns == 0) {
+      params.extraction.num_columns = lidar_format_->num_columns;
+    } else {
+      lidar_format_->num_columns = params.extraction.num_columns;
+    }
+  }
   params.extraction.neighbor_points         = declare_parameter<int>("neighbor_points", params.extraction.neighbor_points);
   params.extraction.num_sectors             = declare_parameter<int>("num_sectors", params.extraction.num_sectors);
   params.extraction.planar_threshold        = declare_parameter<double>("planar_threshold", params.extraction.planar_threshold);
@@ -132,10 +166,53 @@ EstimatorNode::EstimatorNode(const rclcpp::NodeOptions &options)
 
 void EstimatorNode::register_frame(
     const sensor_msgs::msg::PointCloud2::ConstSharedPtr &msg) {
-  // Convert PointCloud2 -> organized vector<PointXYZf> using pc2_conversions
+  // A lot of work later requires at least 2 points
+  if (msg->width * msg->height <= 2) {
+    RCLCPP_WARN(this->get_logger(),
+                "Received PointCloud2 message with too few points: %d",
+                msg->width * msg->height);
+    return;
+  }
+
+  // Convert PointCloud2 -> RawPoints
+  auto raw_points = form_ros::load_pc2(msg);
+
+  // Infer LiDAR sizes if not set by user
+  bool inferred_sizes = false;
+  if (estimator_.m_extractor.params.num_rows == 0 ||
+      estimator_.m_extractor.params.num_columns == 0) {
+    const auto [num_rows, num_columns] = form_ros::infer_lidar_size(raw_points);
+    if (estimator_.m_extractor.params.num_rows == 0) {
+      estimator_.m_extractor.params.num_rows = num_rows;
+    }
+    if (estimator_.m_extractor.params.num_columns == 0) {
+      estimator_.m_extractor.params.num_columns = num_columns;
+    }
+    inferred_sizes = true;
+  }
+  RCLCPP_INFO_ONCE(this->get_logger(), "%s LiDAR sizes: num_rows=%d, num_columns=%d",
+                   inferred_sizes ? "Inferred" : "User-specified",
+                   estimator_.m_extractor.params.num_rows,
+                   estimator_.m_extractor.params.num_columns);
+
+  // Infer lidar ordering properties if not set by user
+  bool inferred_format = false;
+  if (!lidar_format_.has_value()) {
+    lidar_format_ = form_ros::infer_lidar_order(
+        raw_points, estimator_.m_extractor.params.num_rows,
+        estimator_.m_extractor.params.num_columns);
+    inferred_format = true;
+  }
+  RCLCPP_INFO_ONCE(this->get_logger(), "%s LiDAR ordering: %s, %s, %s firing order",
+                   inferred_format ? "Inferred" : "User-specified",
+                   lidar_format_->row_major ? "row major" : "column major",
+                   lidar_format_->all_points_present ? "all points present"
+                                                     : "not all points present",
+                   lidar_format_->map_row_to_fire.has_value() ? "known" : "unknown");
+
+  // RawPoints -> Structured form::PointXYZf
   const auto points =
-      form_ros::PointCloud2ToForm(msg, estimator_.m_params.extraction.num_rows,
-                                  estimator_.m_params.extraction.num_columns);
+      form_ros::reorder(raw_points, *lidar_format_, this->get_logger());
 
   // Register frame with FORM
   const auto &[planar_kp, point_kp] = estimator_.register_scan(points);

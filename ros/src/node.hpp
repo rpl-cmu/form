@@ -9,9 +9,11 @@
 
 // FORM
 #include "form/form.hpp"
+#include "format.hpp"
 #include "utils.hpp"
 
 // ROS 2
+#include <optional>
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2_ros/transform_listener.h>
@@ -55,6 +57,9 @@ private:
   bool invert_odom_tf_;
   bool publish_odom_tf_;
   bool publish_debug_clouds_;
+
+  /// For extracting geometry
+  std::optional<LidarFormat> lidar_format_;
 
   /// Data subscribers.
   rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr pointcloud_sub_;
