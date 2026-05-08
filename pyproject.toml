@@ -1,28 +1,27 @@
 [project]
 name = "form"
 version = "0.1.1"
-description = "Add your description here"
+description = "FORM LiDAR Odometry"
 readme = "README.md"
 authors = [{ name = "Easton Potokar", email = "contagon6@gmail.com" }]
 requires-python = ">=3.11"
-dependencies = [
-    "evalio>=0.4",
-    "gradio-rerun>=0.24.0",
-    "ipython>=9.5.0",
-    "polars>=1.30.0",
-    "pyvista>=0.46.3",
-    "rerun-sdk>=0.23",
-    "seaborn>=0.13.2",
-]
+dependencies = ["evalio>=0.5", "polars>=1.30.0"]
 
 [dependency-groups]
-dev = ["snakeviz>=2.2.2"]
+dev = ["cmake>=4.3", "snakeviz>=2.2.2", "ipython>=9.5.0"]
+vis = [
+    "pyvista>=0.46.3",
+    "seaborn>=0.13.2",
+    "gradio-rerun>=0.24.0",
+    "rerun-sdk>=0.31",
+]
 
 [build-system]
-requires = ["scikit-build-core>=0.10", "nanobind", "evalio>=0.4"]
+requires = ["scikit-build-core>=0.12", "nanobind>=2.12", "evalio>=0.5"]
 build-backend = "scikit_build_core.build"
 
 [tool.scikit-build]
+cmake.version = ">=4.3"
 minimum-version = "build-system.requires"
 build-dir = "build/{wheel_tag}"
 
@@ -34,3 +33,11 @@ VCPKG_INSTALLED_DIR = "./.vcpkg_installed"
 [tool.basedpyright]
 typeCheckingMode = "standard"
 include = ["python"]
+
+[tool.uv]
+cache-keys = [
+    { file = "pyproject.toml" },
+    { file = "form/**/*.{h,c,hpp,cpp}" },
+    { file = "python/**/*.{cpp,py,txt}" },
+    { file = "CMakeLists.txt" },
+]

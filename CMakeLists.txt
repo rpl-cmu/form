@@ -26,8 +26,8 @@ include(FetchContent)
 FetchContent_Declare(
     tsl
     GIT_REPOSITORY https://github.com/Tessil/robin-map.git
-    GIT_TAG v1.4.0
-	FIND_PACKAGE_ARGS CONFIG
+    GIT_TAG v1.4.1
+		FIND_PACKAGE_ARGS CONFIG
 )
 FetchContent_MakeAvailable(tsl)
 

@@ -1,3 +1,5 @@
+#include "evalio/convert/base.h"
+#include "evalio/convert/gtsam.h"
 #include "evalio/pipeline.h"
 #include "evalio/types.h"
 
@@ -14,51 +16,56 @@
 #include <nanobind/stl/tuple.h>
 #include <nanobind/stl/variant.h>
 #include <nanobind/stl/vector.h>
-#include <utility>
 
 namespace nb = nanobind;
+namespace ev = evalio;
 
 // ------------------------- Helpers ------------------------- //
-gtsam::Pose3 pose_to_gtsam(const evalio::SE3 &pose) {
-  return gtsam::Pose3(gtsam::Rot3(pose.rot.toEigen()), gtsam::Point3(pose.trans));
-}
+namespace evalio {
 
-evalio::SE3 pose_to_evalio(const gtsam::Pose3 &pose) {
-  return evalio::SE3(evalio::SO3::fromEigen(pose.rotation().toQuaternion()),
-                     pose.translation());
-}
-
-template <typename Point> evalio::Point point_to_evalio(const Point &point) {
+template <> inline Point convert(const form::PointFeat &in) {
   return {
-      .x = point.x,
-      .y = point.y,
-      .z = point.z,
+      .x = in.x,
+      .y = in.y,
+      .z = in.z,
       .intensity = 0.0,
-      .t = evalio::Duration::from_sec(0),
+      .t = Duration::from_sec(0),
       .row = 0,
-      .col = static_cast<uint16_t>(point.scan),
+      .col = static_cast<uint16_t>(in.scan),
   };
 }
 
-form::PointXYZf point_to_form(const evalio::Point &point) {
-  return form::PointXYZf(point.x, point.y, point.z);
+template <> inline Point convert(const form::PlanarFeat &in) {
+  return {
+      .x = in.x,
+      .y = in.y,
+      .z = in.z,
+      .intensity = 0.0,
+      .t = Duration::from_sec(0),
+      .row = 0,
+      .col = static_cast<uint16_t>(in.scan),
+  };
 }
 
+template <> inline form::PointXYZf convert(const Point &in) {
+  return {
+      static_cast<float>(in.x),
+      static_cast<float>(in.y),
+      static_cast<float>(in.z),
+  };
+}
+
+} // namespace evalio
+
 // ------------------------- Pipeline ------------------------- //
-class FORM : public evalio::Pipeline {
+class FORMDev : public ev::Pipeline {
 public:
-  FORM() : evalio::Pipeline(), params_(), estimator_() {}
+  FORMDev() : estimator_(), params_() {}
 
-  form::Estimator estimator_;
-  form::Estimator::Params params_;
+  // Info
+  static std::string version() { return XSTR(EVALIO_FORM); }
 
-  // helper params
-  gtsam::Pose3 lidar_T_imu_ = gtsam::Pose3::Identity();
-  evalio::Duration delta_time_;
-  evalio::SE3 current_pose = evalio::SE3::identity();
-
-  // ------------------------- Info ------------------------- //
-  static std::string name() { return "form"; }
+  static std::string name() { return "form-dev"; }
 
   static std::string url() { return "https://github.com/rpl-cmu/form"; }
 
@@ -88,95 +95,50 @@ public:
   );
   // clang-format on
 
-  // ------------------------- Getters ------------------------- //
-  // Returns the most recent pose estimate
-  const evalio::SE3 pose() override { return current_pose; }
+  // Getters
+  const std::map<std::string, std::vector<ev::Point>> map() override {
+    const auto planar = std::get<0>(estimator_.m_keypoint_map)
+                            .to_vector(estimator_.m_constraints.get_values());
+    const auto point = std::get<1>(estimator_.m_keypoint_map)
+                           .to_vector(estimator_.m_constraints.get_values());
 
-  // Returns the current submap of the environment
-  const std::map<std::string, std::vector<evalio::Point>> map() override {
-    const auto world_map =
-        form::tuple::transform(estimator_.m_keypoint_map, [&](auto &map) {
-          return map.to_voxel_map(estimator_.m_constraints.get_values(),
-                                  estimator_.m_params.map.min_dist_map);
-        });
-
-    std::tuple<std::string, std::string> map_names = {"planar", "point"};
-    std::map<std::string, std::vector<evalio::Point>> points;
-
-    form::tuple::for_seq(std::make_index_sequence<2>{}, [&](auto I) {
-      const auto name = std::get<I>(map_names);
-      points.insert({name, {}});
-      auto &vec = points[name];
-
-      for (const auto &[_, voxel] : std::get<I>(world_map)) {
-        for (const auto &point : voxel) {
-          vec.push_back(point_to_evalio(point));
-        }
-      }
-    });
-
-    return points;
+    return ev::make_map("planar", planar, "point", point);
   }
 
-  // ------------------------- Setters ------------------------- //
-  // Set the IMU parameters
-  void set_imu_params(evalio::ImuParams params) override {}
+  // Setters
+  void set_imu_params(ev::ImuParams params) override {}
 
-  // Set the LiDAR parameters
-  void set_lidar_params(evalio::LidarParams params) override {
+  void set_lidar_params(ev::LidarParams params) override {
     params_.extraction.min_norm_squared = params.min_range * params.min_range;
     params_.extraction.max_norm_squared = params.max_range * params.max_range;
     params_.extraction.num_columns = params.num_columns;
     params_.extraction.num_rows = params.num_rows;
-    delta_time_ = params.delta_time();
   }
 
-  // Set the transformation from IMU to LiDAR
-  void set_imu_T_lidar(evalio::SE3 T) override {
-    lidar_T_imu_ = pose_to_gtsam(T).inverse();
+  void set_imu_T_lidar(ev::SE3 T) override {
+    lidar_T_imu_ = ev::convert<gtsam::Pose3>(T).inverse();
   }
 
-  // ------------------------- Doers ------------------------- //
-  // Initialize the pipeline
+  // Doers
   void initialize() override { estimator_ = form::Estimator(params_); }
 
-  // Add an IMU measurement
-  void add_imu(evalio::ImuMeasurement mm) override {}
+  void add_imu(ev::ImuMeasurement mm) override {}
 
-  // Add a LiDAR measurement
-  std::map<std::string, std::vector<evalio::Point>>
-  add_lidar(evalio::LidarMeasurement mm) override {
-    // convert to evalio
-    std::vector<form::PointXYZf> scan;
-    auto start = mm.stamp;
-    auto end = mm.stamp + delta_time_;
+  void add_lidar(ev::LidarMeasurement mm) override {
+    const auto scan = ev::convert_iter<std::vector<form::PointXYZf>>(mm.points);
 
-    for (const auto &point : mm.points) {
-      scan.push_back(point_to_form(point));
-    }
-
-    // run the estimator
     auto [planar_kp, point_kp] = estimator_.register_scan(scan);
-    current_pose =
-        pose_to_evalio(estimator_.current_lidar_estimate() * lidar_T_imu_);
 
-    // extract the keypoints
-    std::map<std::string, std::vector<evalio::Point>> points = {{"planar", {}},
-                                                                {"point", {}}};
-    auto &all_planar = points["planar"];
-    auto &all_point = points["point"];
-    for (const auto &point : planar_kp) {
-      const auto ev_point = point_to_evalio(point);
-      all_planar.push_back(ev_point);
-    }
-
-    for (const auto &point : point_kp) {
-      const auto ev_point = point_to_evalio(point);
-      all_point.push_back(ev_point);
-    }
-
-    return points;
+    this->save(mm.stamp, estimator_.current_lidar_estimate() * lidar_T_imu_);
+    this->save(mm.stamp, "planar", planar_kp, "point", point_kp);
   }
+
+private:
+  form::Estimator estimator_;
+  form::Estimator::Params params_;
+
+  gtsam::Pose3 lidar_T_imu_ = gtsam::Pose3::Identity();
+  ev::SE3 current_pose_ = ev::SE3::identity();
 };
 
 NB_MODULE(_core, m) {
@@ -186,11 +148,11 @@ NB_MODULE(_core, m) {
 
   // Only have to override the static methods here
   // All the others will be automatically inherited from the base class
-  nb::class_<FORM, evalio::Pipeline>(m, "FORM")
+  nb::class_<FORMDev, evalio::Pipeline>(m, "form-dev")
       .def(nb::init<>())
-      .def_static("name", &FORM::name)
-      .def_static("url", &FORM::url)
-      .def_static("default_params", &FORM::default_params);
+      .def_static("name", &FORMDev::name)
+      .def_static("url", &FORMDev::url)
+      .def_static("default_params", &FORMDev::default_params);
 
   // Expose extraction methods too
   nb::class_<form::FeatureExtractor::Params>(m, "KeypointExtractionParams")
