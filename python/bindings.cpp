@@ -63,7 +63,7 @@ public:
   FORMDev() : estimator_(), params_() {}
 
   // Info
-  static std::string version() { return "0.1.1-dev"; } // x-release-please-version
+  static std::string version() { return "0.2.0"; } // x-release-please-version
 
   static std::string name() { return "form-dev"; }
 

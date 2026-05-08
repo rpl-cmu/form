@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.2.0](https://github.com/rpl-cmu/form/compare/v0.1.1...v0.2.0) (2026-05-08)
+
+
+### ⚠ BREAKING CHANGES
+
+* Extraction of too many point features ([#15](https://github.com/rpl-cmu/form/issues/15))
+
+### Features
+
+* ROS2 point reordering ([#13](https://github.com/rpl-cmu/form/issues/13)) ([37cb01f](https://github.com/rpl-cmu/form/commit/37cb01f8f5cf65a9dfd18081888536063d5e58b9))
+* Version bumps ([#16](https://github.com/rpl-cmu/form/issues/16)) ([7ba4794](https://github.com/rpl-cmu/form/commit/7ba47947c5ba4031ade4cd42da6a327bdc1c152c))
+
+
+### Bug Fixes
+
+* Extraction of too many point features ([#15](https://github.com/rpl-cmu/form/issues/15)) ([72b9d15](https://github.com/rpl-cmu/form/commit/72b9d153bd118a951f5d2dc40b6748d1dd0aebb1))
+
 ## [0.1.1](https://github.com/rpl-cmu/form/compare/v0.1.0...v0.1.1) (2026-03-17)
 
 
