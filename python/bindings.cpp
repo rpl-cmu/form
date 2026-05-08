@@ -148,7 +148,7 @@ NB_MODULE(_core, m) {
 
   // Only have to override the static methods here
   // All the others will be automatically inherited from the base class
-  nb::class_<FORMDev, evalio::Pipeline>(m, "form-dev")
+  nb::class_<FORMDev, evalio::Pipeline>(m, "FORMDev")
       .def(nb::init<>())
       .def_static("name", &FORMDev::name)
       .def_static("url", &FORMDev::url)
