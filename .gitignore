@@ -10,7 +10,7 @@ log
 .vscode
 .envrc
 .clangd
-
+.kiro
 .helix
 
 *.bbl

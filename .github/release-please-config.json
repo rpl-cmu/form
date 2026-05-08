@@ -15,11 +15,7 @@
         "python/bindings.cpp",
         "ros/pixi.toml",
         "ros/CMakeLists.txt",
-        {
-          "path": "ros/package.xml",
-          "type": "xml",
-          "xpath": "//package/version"
-        }
+        "ros/package.xml"
       ]
     }
   },
