@@ -12,6 +12,7 @@
           "path": "vcpkg.json",
           "jsonpath": "$.version"
         },
+        "python/bindings.cpp",
         "ros/pixi.toml",
         "ros/CMakeLists.txt",
         {
