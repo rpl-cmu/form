@@ -395,6 +395,9 @@ void FeatureExtractor::extract_point(const size_t &sector_start_point,
       if (num_sector_point_features > params.point_feats_per_sector)
         break;
     }
+    // Early exit if we have found enough features
+    if (num_sector_point_features > params.point_feats_per_sector)
+      break;
   }
 }
 

@@ -1,0 +1,23 @@
+{
+  "packages": {
+    ".": {
+      "changelog-path": "CHANGELOG.md",
+      "release-type": "python",
+      "bump-minor-pre-major": true,
+      "bump-patch-for-minor-pre-major": true,
+      "extra-files": [
+        "CMakeLists.txt",
+        {
+          "type": "json",
+          "path": "vcpkg.json",
+          "jsonpath": "$.version"
+        },
+        "python/bindings.cpp",
+        "ros/pixi.toml",
+        "ros/CMakeLists.txt",
+        "ros/package.xml"
+      ]
+    }
+  },
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json"
+}

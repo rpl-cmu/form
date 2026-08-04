@@ -4,8 +4,9 @@
 #
 # Adapted from KISS-ICP launch file
 # (Copyright (c) 2022 Ignacio Vizzo, Tiziano Guadagnino, Benedikt Mersch, Cyrill Stachniss)
+from typing import Any
 from launch import LaunchDescription
-from launch.actions import ExecuteProcess
+from launch.actions import DeclareLaunchArgument, ExecuteProcess
 from launch.conditions import IfCondition
 from launch.substitutions import (
     LaunchConfiguration,
@@ -17,12 +18,6 @@ from launch_ros.substitutions import FindPackageShare
 
 
 class config:
-    # LiDAR geometry
-    num_rows: int = 64
-    num_columns: int = 1024
-    min_range: float = 1.0
-    max_range: float = 100.0
-
     # Feature extraction
     neighbor_points: int = 5
     num_sectors: int = 6
@@ -43,31 +38,56 @@ class config:
     max_num_recent_scans: int = 10
     max_steps_unused_keyscan: int = 10
     keyscan_match_ratio: float = 0.1
-    max_dist_map: float = 0.1
+    min_dist_map: float = 0.1
 
     # Misc
     num_threads: int = 0
 
     # Covariance diagonal values
+    # TODO: Extract covariance from our graph
     position_covariance: float = 0.1
     orientation_covariance: float = 0.1
 
 
+def make_config(
+    launch_args: "list[DeclareLaunchArgument]",
+    name: str,
+    description: str,
+    default: Any | None = None,
+):
+    launch_args.append(
+        DeclareLaunchArgument(
+            name=name,
+            default_value=None if default is None else str(default),
+            description=description,
+        )
+    )
+    return LaunchConfiguration(name, default=default)
+
+
 def generate_launch_description():
-    use_sim_time = LaunchConfiguration("use_sim_time", default="true")
+    la = []
+    # fmt: off
+    topic = make_config(la, "topic",            "Input point cloud topic")
+    # lidar geometry config
+    # either specify a model
+    lidar_model = make_config(la, "lidar_model",    "Predefined LiDAR model (e.g. 'VLP-16')", "")
+    # specify some geometry directly (will override model if set)
+    num_columns     = make_config(la, "num_columns",      "LiDAR image width (columns)",             0)
+    num_rows        = make_config(la, "num_rows",         "LiDAR image height (rows)",               0)
+    min_range   = make_config(la, "min_range",        "Minimum LiDAR range",                  0.0)
+    max_range   = make_config(la, "max_range",        "Maximum LiDAR range",                  0.0)
 
-    # ROS configuration
-    pointcloud_topic = LaunchConfiguration("topic")
-    visualize = LaunchConfiguration("visualize", default="true")
-
-    # Optional ros bag play
-    bagfile = LaunchConfiguration("bagfile", default="")
-
+    # optional visualization and rosbag play
+    visualize = make_config(la, "visualize",        "Launch RViz and debug visualization",  True)
+    bagfile   = make_config(la, "bagfile",          "Optional rosbag file/folder to play",  "")
     # tf tree configuration
-    base_frame = LaunchConfiguration("base_frame", default="")
-    lidar_odom_frame = LaunchConfiguration("lidar_odom_frame", default="odom_lidar")
-    publish_odom_tf = LaunchConfiguration("publish_odom_tf", default=True)
-    invert_odom_tf = LaunchConfiguration("invert_odom_tf", default=True)
+    base_frame       = make_config(la, "base_frame",       "Base frame id",                        "")
+    lidar_odom_frame = make_config(la, "lidar_odom_frame", "Odometry frame id",                    "odom_lidar")
+    publish_odom_tf  = make_config(la, "publish_odom_tf",  "Publish odom->base TF",                True)
+    invert_odom_tf   = make_config(la, "invert_odom_tf",   "Invert published odom TF",             True)
+    use_sim_time     = make_config(la, "use_sim_time",     "Use simulation time",                  True)
+    # fmt: on
 
     # FORM node
     form_node = Node(
@@ -76,7 +96,7 @@ def generate_launch_description():
         name="form_node",
         output="screen",
         remappings=[
-            ("pointcloud_topic", pointcloud_topic),
+            ("pointcloud_topic", topic),
         ],
         parameters=[
             {
@@ -86,11 +106,12 @@ def generate_launch_description():
                 "publish_odom_tf": publish_odom_tf,
                 "invert_odom_tf": invert_odom_tf,
                 # LiDAR geometry
-                "num_rows": config.num_rows,
-                "num_columns": config.num_columns,
-                "min_range": config.min_range,
-                "max_range": config.max_range,
+                "lidar_model": lidar_model,
+                "num_columns": num_columns,
+                "num_rows": num_rows,
                 # Feature extraction
+                "min_range": min_range,
+                "max_range": max_range,
                 "neighbor_points": config.neighbor_points,
                 "num_sectors": config.num_sectors,
                 "planar_threshold": config.planar_threshold,
@@ -108,7 +129,7 @@ def generate_launch_description():
                 "max_num_recent_scans": config.max_num_recent_scans,
                 "max_steps_unused_keyscan": config.max_steps_unused_keyscan,
                 "keyscan_match_ratio": config.keyscan_match_ratio,
-                "max_dist_map": config.max_dist_map,
+                "min_dist_map": config.min_dist_map,
                 # Misc
                 "num_threads": config.num_threads,
                 # Fixed covariances
@@ -132,13 +153,25 @@ def generate_launch_description():
     )
 
     bagfile_play = ExecuteProcess(
-        cmd=["ros2", "bag", "play", "--rate", "1", bagfile, "--clock", "1000.0"],
+        cmd=[
+            "ros2",
+            "bag",
+            "play",
+            "--rate",
+            "1",
+            bagfile,
+            "--clock",
+            "1000.0",
+            "--read-ahead-queue-size",
+            "10000",
+        ],
         output="screen",
         condition=IfCondition(PythonExpression(["'", bagfile, "' != ''"])),
     )
 
     return LaunchDescription(
         [
+            *la,
             form_node,
             rviz_node,
             bagfile_play,

@@ -1,0 +1,27 @@
+name: "Checks: Lint and Types"
+
+on:
+  workflow_call:
+
+jobs:
+  # Check Python formatting
+  ruff:
+    name: Ruff
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        name: Checkout
+      - uses: astral-sh/ruff-action@v3
+        name: Ruff
+
+  # Check C++ formatting
+  clang-format:
+    name: Clang-Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        name: Checkout
+      - uses: jidicula/clang-format-action@v4.14.0
+        name: Clang-Format
+        with:
+          clang-format-version: '22'

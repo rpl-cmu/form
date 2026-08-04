@@ -1,0 +1,24 @@
+name: PR
+
+on:
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  # Always run checks
+  checks:
+    name: Checks
+    uses: ./.github/workflows/reusable_checks.yml
+    secrets: inherit
+
+  # Build main Python package
+  build:
+    name: Build
+    uses: ./.github/workflows/reusable_build.yml
+    secrets: inherit
+
+  # Build ROS 2 package
+  build_ros:
+    name: Build ROS
+    uses: ./.github/workflows/reusable_build_ros.yml
+    secrets: inherit

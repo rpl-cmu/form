@@ -4,7 +4,7 @@
 <br />
 <br />
 <a href="https://github.com/rpl-cmu/form/releases"><img src="https://img.shields.io/github/v/release/rpl-cmu/form" /></a>
-<a href="https://github.com/rpl-cmu/form/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/rpl-cmu/form/ci.yml" /></a>
+<a href="https://github.com/rpl-cmu/form/actions/workflows/on_main.yml"><img src="https://img.shields.io/github/actions/workflow/status/rpl-cmu/form/on_main.yml" /></a>
 <a href="https://github.com/rpl-cmu/form/blob/master/LICENSE"><img src="https://img.shields.io/github/license/rpl-cmu/form" /></a>
 <a href="https://arxiv.org/abs/2510.09966"><img src="https://img.shields.io/badge/arXiv-2510.09966-b31b1b.svg" /></a>
 <br />
@@ -54,6 +54,19 @@ Datasets can be commented out in the config file if they haven't been downloaded
 ```bash
 evalio stats evalio_results/25.10.03_full/
 ```
+
+## ROS Support
+
+FORM has a simple ROS wrapper found in [ros/](ros/). Using it is as easy as cloning into your workspace,
+
+```sh
+cd ~/ros2_ws/src
+git clone https://github.com/rpl-cmu/form.git
+cd ..
+colcon build --packages-select form
+```
+
+More details (including setup using [pixi](https://pixi.prefix.dev/latest/) and [robostack](https://robostack.github.io/index.html) for the purists out there) can be found in the [ros README](ros/)
 
 ## Roadmap
 - [ ] ROS Node

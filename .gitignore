@@ -1,8 +1,5 @@
 build*
 .cache
-# pixi environments
-.pixi
-*.egg-info
 compile_commands.json
 
 # ros env
@@ -12,7 +9,8 @@ log
 # vscode environments
 .vscode
 .envrc
-
+.clangd
+.kiro
 .helix
 
 *.bbl
@@ -23,6 +21,7 @@ log
 *.synctex
 *.run.xml
 *.rrd
+.vcpkg*
 
 # python
 __pycache__
@@ -34,3 +33,4 @@ evalio_results
 *.png
 figures
 graphics*
+*.mp4

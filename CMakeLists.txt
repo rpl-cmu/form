@@ -1,9 +1,13 @@
+# First thing, we check if vcpkg is installed and if so, use it for dependencies
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.vcpkg/scripts/buildsystems/vcpkg.cmake")
+    set(CMAKE_TOOLCHAIN_FILE
+        "${CMAKE_CURRENT_SOURCE_DIR}/.vcpkg/scripts/buildsystems/vcpkg.cmake"
+    )
+endif()
+
 cmake_minimum_required(VERSION 3.16)
 
-project(form
-	VERSION 0.1.0
-	LANGUAGES CXX
-)
+project(form VERSION 0.2.0 LANGUAGES CXX) # x-release-please-version
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD 17)
@@ -22,8 +26,8 @@ include(FetchContent)
 FetchContent_Declare(
     tsl
     GIT_REPOSITORY https://github.com/Tessil/robin-map.git
-    GIT_TAG v1.4.0
-	FIND_PACKAGE_ARGS CONFIG
+    GIT_TAG v1.4.1
+		FIND_PACKAGE_ARGS CONFIG
 )
 FetchContent_MakeAvailable(tsl)
 

@@ -1,0 +1,325 @@
+// Adapted from evalio's pc2_conversions.h
+// https://github.com/contagon/evalio/blob/main/cpp/bindings/ros_pc2.h
+//
+// Converts ROS PointCloud2 messages into organized form::PointXYZf vectors
+// (row-major, num_rows * num_columns) suitable for FORM's feature extraction.
+#pragma once
+
+#include <algorithm>
+#include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <cstring>
+#include <functional>
+#include <iostream>
+#include <stdexcept>
+#include <string>
+#include <tuple>
+#include <vector>
+
+#include "format.hpp"
+#include <form/utils.hpp>
+#include <rclcpp/rclcpp.hpp>
+#include <sensor_msgs/msg/point_cloud2.hpp>
+
+namespace form_ros {
+
+// ----------------------------- PC2 -> RawPoints ----------------------------- //
+// Holds parsed per-point data before reordering into the organized grid.
+struct RawPoint {
+  float x = 0.0f;
+  float y = 0.0f;
+  float z = 0.0f;
+  uint8_t row = 0;
+  uint16_t col = 0;
+};
+
+// Build a lambda that reads a field of type T from raw PointCloud2 byte data
+// at the given offset, handling the various PointField datatypes.
+template <typename T>
+std::function<void(T &, const uint8_t *)> data_getter(uint8_t datatype,
+                                                      uint32_t offset) {
+  using sensor_msgs::msg::PointField;
+  switch (datatype) {
+  case PointField::UINT8:
+    return [offset](T &value, const uint8_t *data) noexcept {
+      value = static_cast<T>(data[offset]);
+    };
+  case PointField::INT8:
+    return [offset](T &value, const uint8_t *data) noexcept {
+      value = static_cast<T>(*reinterpret_cast<const int8_t *>(data + offset));
+    };
+  case PointField::UINT16:
+    return [offset](T &value, const uint8_t *data) noexcept {
+      uint16_t v;
+      std::memcpy(&v, data + offset, sizeof(v));
+      value = static_cast<T>(v);
+    };
+  case PointField::INT16:
+    return [offset](T &value, const uint8_t *data) noexcept {
+      int16_t v;
+      std::memcpy(&v, data + offset, sizeof(v));
+      value = static_cast<T>(v);
+    };
+  case PointField::UINT32:
+    return [offset](T &value, const uint8_t *data) noexcept {
+      uint32_t v;
+      std::memcpy(&v, data + offset, sizeof(v));
+      value = static_cast<T>(v);
+    };
+  case PointField::INT32:
+    return [offset](T &value, const uint8_t *data) noexcept {
+      int32_t v;
+      std::memcpy(&v, data + offset, sizeof(v));
+      value = static_cast<T>(v);
+    };
+  case PointField::FLOAT32:
+    return [offset](T &value, const uint8_t *data) noexcept {
+      float v;
+      std::memcpy(&v, data + offset, sizeof(v));
+      value = static_cast<T>(v);
+    };
+  case PointField::FLOAT64:
+    return [offset](T &value, const uint8_t *data) noexcept {
+      double v;
+      std::memcpy(&v, data + offset, sizeof(v));
+      value = static_cast<T>(v);
+    };
+  default:
+    throw std::runtime_error("Unsupported PointField datatype: " +
+                             std::to_string(datatype));
+  }
+}
+
+template <typename T> std::function<void(T &, const uint8_t *)> blank() {
+  return [](T &, const uint8_t *) noexcept {};
+}
+
+inline std::vector<RawPoint>
+load_pc2(const sensor_msgs::msg::PointCloud2::ConstSharedPtr &msg) {
+  if (msg->is_bigendian) {
+    throw std::runtime_error("Big-endian PointCloud2 is not supported");
+  }
+
+  const int n_points = static_cast<int>(msg->width) * static_cast<int>(msg->height);
+
+  // Build field accessors
+  std::function func_x = blank<float>();
+  std::function func_y = blank<float>();
+  std::function func_z = blank<float>();
+  std::function func_row = blank<uint8_t>();
+
+  bool has_x = false;
+  bool has_y = false;
+  bool has_z = false;
+  bool has_row = false;
+
+  for (const auto &field : msg->fields) {
+    if (field.name == "x") {
+      func_x = data_getter<float>(field.datatype, field.offset);
+      has_x = true;
+    } else if (field.name == "y") {
+      func_y = data_getter<float>(field.datatype, field.offset);
+      has_y = true;
+    } else if (field.name == "z") {
+      func_z = data_getter<float>(field.datatype, field.offset);
+      has_z = true;
+    } else if (field.name == "ring" || field.name == "row" ||
+               field.name == "channel") {
+      func_row = data_getter<uint8_t>(field.datatype, field.offset);
+      has_row = true;
+    }
+  }
+
+  // Validate that all required fields were found
+  if (!has_x || !has_y || !has_z) {
+    throw std::runtime_error("PointCloud2ToForm: Missing required point fields; "
+                             "expected fields 'x', 'y', and 'z'.");
+  }
+  if (!has_row) {
+    throw std::runtime_error("PointCloud2ToForm: Missing required row indicator "
+                             "field; expected one of 'ring', 'row', or 'channel'.");
+  }
+
+  // Parse all points
+  std::vector<RawPoint> raw(n_points);
+  const uint8_t *data = msg->data.data();
+  for (size_t i = 0; i < n_points; ++i) {
+    const uint8_t *pt = data + i * msg->point_step;
+    func_x(raw[i].x, pt);
+    func_y(raw[i].y, pt);
+    func_z(raw[i].z, pt);
+    func_row(raw[i].row, pt);
+  }
+
+  return raw;
+}
+
+// ------------------------- Infer LiDAR Properties ------------------------- //
+inline std::tuple<size_t, size_t>
+infer_lidar_size(const std::vector<RawPoint> &raw) {
+  size_t num_rows = 0;
+  size_t num_columns = 0;
+
+  // Infer the number of rings/rows by finding the max row index in the data
+  // And then rounding up to the nearest power of 2 for safety
+  // (Occasionally entire rows will be missing)
+  num_rows = std::max_element(
+                 raw.begin(), raw.end(),
+                 [](const RawPoint &a, const RawPoint &b) { return a.row < b.row; })
+                 ->row +
+             1; // rows are 0-indexed
+  num_rows = static_cast<size_t>(std::pow(2, std::ceil(std::log2(num_rows))));
+
+  // Count the number of each row to infer the number of columns
+  std::vector<size_t> row_counts(num_rows, 0);
+  for (const auto &p : raw) {
+    row_counts[p.row]++;
+  }
+
+  // Find the maximum number of points in any row
+  num_columns = *std::max_element(row_counts.begin(), row_counts.end());
+
+  return std::make_tuple(num_rows, num_columns);
+}
+
+inline LidarFormat infer_lidar_order(const std::vector<RawPoint> &raw,
+                                     size_t num_rows, size_t num_columns) {
+  LidarFormat model;
+  model.num_rows = num_rows;
+  model.num_columns = num_columns;
+
+  model.row_major = raw[0].row == raw[1].row;
+  model.all_points_present = (raw.size() == num_rows * num_columns);
+
+  // If all points are present, we can infer the firing order
+  // by looking at the first num_rows points
+  if (model.all_points_present && !model.row_major) {
+    std::vector<long> map_fire_to_row(num_rows, -1);
+    for (size_t i = 0; i < num_rows; ++i) {
+      map_fire_to_row[i] = raw[i].row;
+    }
+    model.map_row_to_fire = invert_map(map_fire_to_row);
+  }
+
+  return model;
+}
+
+// ------------------------- Reordering Helpers ------------------------- //
+
+// Iterates through points to fill in columns
+inline void
+_fill_col(std::vector<RawPoint> &mm,
+          std::function<void(uint16_t &col, const uint16_t &prev_col,
+                             const uint8_t &prev_row, const uint8_t &curr_row)>
+              func_col) {
+  // fill out the first one to kickstart
+  uint16_t prev_col = 0;
+  uint8_t prev_row = mm[0].row;
+  for (auto p = mm.begin() + 1; p != mm.end(); ++p) {
+    func_col(p->col, prev_col, prev_row, p->row);
+    prev_col = p->col;
+    prev_row = p->row;
+  }
+}
+
+// Fills in column index for row major order
+inline void fill_col_row_major(std::vector<RawPoint> &mm) {
+  auto func_col = [](uint16_t &col, const uint16_t &prev_col,
+                     const uint8_t &prev_row, const uint8_t &curr_row) {
+    if (prev_row != curr_row) {
+      col = 0;
+    } else {
+      col = prev_col + 1;
+    }
+  };
+
+  _fill_col(mm, func_col);
+}
+
+// Fills in column index for column major order with known firing order
+inline void fill_col_col_major(std::vector<RawPoint> &mm, const LidarFormat &model) {
+  auto func_col = [&model](uint16_t &col, const uint16_t &prev_col,
+                           const uint8_t &prev_row, const uint8_t &curr_row) {
+    if (model.map_row_to_fire.value()[curr_row] <
+        model.map_row_to_fire.value()[prev_row]) {
+      col = prev_col + 1;
+    } else {
+      col = prev_col;
+    }
+  };
+
+  _fill_col(mm, func_col);
+}
+
+// Fills in column index for column major order when we don't know firing order,
+// by counting how many times each row has been seen so far
+// This will put all invalid points at the end of each row
+inline void fill_col_col_major_unknown(std::vector<RawPoint> &mm,
+                                       const LidarFormat &model) {
+  std::vector<size_t> col_index(model.num_rows, 0);
+  for (auto &p : mm) {
+    p.col = col_index[p.row];
+    col_index[p.row]++;
+  }
+}
+
+// Otherwise, we won't be able to reorder things properly
+inline std::vector<form::PointXYZf>
+reorder(std::vector<RawPoint> &raw, const LidarFormat &model,
+        std::optional<rclcpp::Logger> logger = std::nullopt) {
+  const int n_points = static_cast<int>(raw.size());
+
+  // Catch some potential edge cases with bad values
+  if (n_points > model.num_columns * model.num_rows) {
+    if (logger) {
+      RCLCPP_WARN(logger.value(),
+                  "Warning: PointCloud2 has more points (%d) than expected from "
+                  "num_rows and num_columns (%d). Parameters were inferred or "
+                  "provided incorrectly.",
+                  n_points, model.num_rows * model.num_columns);
+    } else {
+      std::cerr
+          << "Warning: PointCloud2 has more points than expected from num_rows "
+          << "and num_columns. Parameters were inferred or provided incorrectly."
+          << std::endl;
+    }
+  }
+
+  // Fill out column indices based on current setup
+  if (model.row_major) {
+    fill_col_row_major(raw);
+  } else if (!model.map_row_to_fire.has_value()) {
+    fill_col_col_major_unknown(raw, model);
+  } else {
+    fill_col_col_major(raw, model);
+  }
+
+  std::vector<form::PointXYZf> output(model.num_rows * model.num_columns,
+                                      form::PointXYZf(0.0f, 0.0f, 0.0f));
+
+  for (auto p : raw) {
+    if (p.row >= model.num_rows || p.col >= model.num_columns) {
+      if (logger) {
+        RCLCPP_WARN(logger.value(),
+                    "Warning: Point with row %d and col %d is out of "
+                    "bounds for num_rows=%d and num_cols=%d, skipping. Parameters "
+                    "were inferred or provided incorrectly.",
+                    static_cast<int>(p.row), p.col, model.num_rows,
+                    model.num_columns);
+      } else {
+        std::cerr << "Warning: Point with row " << static_cast<int>(p.row)
+                  << " and col " << p.col
+                  << " is out of bounds for num_rows=" << model.num_rows
+                  << " and num_cols=" << model.num_columns
+                  << ", skipping. Parameters were inferred or provided incorrectly."
+                  << std::endl;
+      }
+      continue;
+    }
+    output[p.row * model.num_columns + p.col] = form::PointXYZf(p.x, p.y, p.z);
+  }
+  return output;
+}
+
+} // namespace form_ros

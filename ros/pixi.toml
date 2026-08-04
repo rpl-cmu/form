@@ -3,13 +3,14 @@ authors = ["Easton Potokar <contagon6@gmail.com>"]
 channels = ["robostack-jazzy", "conda-forge"]
 name = "ros"
 platforms = ["linux-64"]
-version = "0.1.0"
+version = "0.2.0"                                  # x-release-please-version
 
 [activation]
 scripts = ["install/setup.sh"]
 
 [tasks]
 build = "colcon build --event-handlers console_direct+"
+oxford = "ros2 launch form odometry.launch.py bagfile:=$EVALIO_DATA/oxford_spires/blenheim_palace_01 topic:=/hesai/pandar lidar_model:=Hesai-QT64"
 
 [dependencies]
 ros-jazzy-ros-base = ">=0.11.0,<0.12"
@@ -20,3 +21,6 @@ cmake = ">=4.2.3,<5"
 ninja = ">=1.13.2,<2"
 colcon-common-extensions = ">=0.3.0,<0.4"
 ros-jazzy-gtsam = ">=4.2.0,<5"
+ros-jazzy-rviz2 = ">=14.1.19,<15"
+clang = ">=22.1.0,<23"
+clang-tools = ">=22.1.0,<23"

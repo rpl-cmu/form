@@ -78,6 +78,10 @@ struct Estimator {
   /// @brief Get the current lidar estimate
   gtsam::Pose3 current_lidar_estimate() { return m_constraints.get_current_pose(); }
 
+  /// @brief Get the current map point clouds for visualization
+  std::tuple<std::vector<PlanarFeat>, std::vector<PointFeat>>
+  current_map() const noexcept;
+
   /// @brief Register a new scan and return the extracted features
   std::tuple<std::vector<PlanarFeat>, std::vector<PointFeat>>
   register_scan(const std::vector<PointXYZf> &scan) noexcept;
