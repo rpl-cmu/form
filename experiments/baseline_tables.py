@@ -1,6 +1,7 @@
 import polars as pl
 import numpy as np
 
+# pyrefly: ignore [missing-import]
 from env import (
     DATASETS,
     GRAPHICS_DIR,

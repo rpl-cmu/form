@@ -4,6 +4,7 @@ from evalio.stats import align, WindowMeters
 import numpy as np
 import matplotlib.pyplot as plt
 
+# pyrefly: ignore [missing-import]
 from env import (
     COL_WIDTH,
     pretty_pipe_names,

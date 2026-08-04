@@ -10,6 +10,7 @@ import pickle
 
 from itertools import chain
 
+# pyrefly: ignore [missing-import]
 from env import GRAPHICS_DIR
 
 # ------------------------- Config! ------------------------- #

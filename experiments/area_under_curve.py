@@ -2,6 +2,7 @@ import polars as pl
 import seaborn as sns
 import matplotlib.pyplot as plt
 
+# pyrefly: ignore [missing-import]
 from env import (
     COL_WIDTH,
     pretty_pipe_names,
@@ -14,9 +15,7 @@ from env import (
 
 c = setup_plot()
 # plot the results
-fig, ax = plt.subplots(
-    1, 2, figsize=(COL_WIDTH + 0.5, 2.0), layout="constrained", sharey=True
-)
+fig, ax = plt.subplots(1, 2, figsize=(6, 2.0), layout="constrained", sharey=True)
 
 limits = [0.9, 7.0]
 
@@ -51,13 +50,19 @@ for i, window in enumerate([WINDOW_SMALL, WINDOW_LARGE]):
     ax[i].legend().remove()
     ax[i].set_xlim(0, limits[i])
     ax[i].set_xlabel(rf"RTE$_{{{int(window.value)}}}$ Threshold (m)")
-    ax[i].set_ylabel("% Sequences Above Threshold")
+    ax[i].set_ylabel("% Sequences Below Threshold")
     # ax[i].legend(
     #     loc="lower right",
     # )
 
     ax[i].tick_params(axis="x", pad=-2.5)
     ax[i].tick_params(axis="y", pad=-2.5)
+
+    for j, line in enumerate(ax[i].lines):
+        if j >= 1:
+            cr, cg, cb = line.get_color()
+            line.set_color((cr, cg, cb, 0.55))
+
 
 handles, labels = ax[0].get_legend_handles_labels()
 leg = fig.legend(
@@ -68,7 +73,7 @@ leg = fig.legend(
     labelspacing=0.0,
     loc="outside upper left",
     columnspacing=1.5,
-    bbox_to_anchor=(0.01, -0.02),
+    bbox_to_anchor=(0.2, -0.02),
 ).get_frame()
 leg.set_boxstyle("square")  # type: ignore
 leg.set_linewidth(1.0)

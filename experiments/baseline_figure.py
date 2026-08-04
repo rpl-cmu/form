@@ -1,3 +1,4 @@
+# pyrefly: ignore [missing-import]
 from env import (
     SHORT_DATASET_NAMES,
     WINDOW_SMALL,
@@ -17,7 +18,7 @@ import matplotlib.pyplot as plt
 names = ["form", "kiss", "genz", "mad", "ct"]
 
 c = setup_plot()
-fig, ax = plt.subplots(1, 2, figsize=(COL_WIDTH * 2, 3.5), layout="constrained")
+fig, ax = plt.subplots(1, 2, figsize=(6, 2.25), layout="constrained")
 
 df_small = compute_and_cache(WINDOW_SMALL, pipes=names)
 df_big = compute_and_cache(WINDOW_LARGE, pipes=names)
@@ -46,6 +47,12 @@ sns.barplot(
     legend=False,
     palette=c,
 )
+for i, bar in enumerate(ax[0].patches):
+    if i >= 7:
+        cr, cg, cb, _ = bar.get_facecolor()
+        bar.set_facecolor((cr, cg, cb, 0.4))
+        bar.set_edgecolor((cr, cg, cb, 0.7))
+
 ax[0].set_ylabel("1.0 RTEt (m)")
 ax[0].set_yscale("symlog", linthresh=0.2, linscale=4.0)
 ax[0].set_yticks([0.1, 0.2, 0.5, 1.0], labels=["0.1", "0.2", "0.5", "1.0"])
@@ -64,6 +71,13 @@ sns.barplot(
     ax=ax[1],
     palette=c,
 )
+for i, bar in enumerate(ax[1].patches):
+    if i >= 7:
+        cr, cg, cb, _ = bar.get_facecolor()
+        bar.set_facecolor((cr, cg, cb, 0.4))
+        bar.set_edgecolor((cr, cg, cb, 0.7))
+
+
 ax[1].set_ylabel("30.0 RTEt (m)")
 ax[1].set_yscale("symlog", linthresh=2.0, linscale=4.0)
 ax[1].set_yticks([1, 2, 5, 10], labels=["1", "2", "5", "10"])

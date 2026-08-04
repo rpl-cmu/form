@@ -8,6 +8,7 @@ import numpy as np
 from time import time
 import pickle
 
+# pyrefly: ignore [missing-import]
 from env import GRAPHICS_DIR
 
 # ------------------------- Config! ------------------------- #
